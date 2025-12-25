@@ -4,6 +4,8 @@
 
 A modern portfolio and agency website showcasing otherdev's work - a full-service web development and design studio based in Karachi City, specializing in fashion, design, and enterprise digital solutions.
 
+<img src="https://socialify.git.ci/ossaidqadri/otherdev-web-v2/image?description=1&font=KoHo&language=1&name=1&owner=1&pattern=Charlie+Brown&stargazers=1&theme=Auto" alt="otherdev-web-v2" width="640" height="320" />
+
 [![Next.js](https://img.shields.io/badge/Next.js-16.0-black)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19.2-blue)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
