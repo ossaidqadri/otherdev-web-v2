@@ -57,7 +57,6 @@ export const projects: Project[] = [
       "/images/projects/lexa-2025/home.webp",
       "/images/projects/lexa-2025/auth.webp",
       "/images/projects/lexa-2025/lexa-ai.webp",
-      "/images/projects/lexa-2025/lexa-document-editor.webp",
       "/images/projects/lexa-2025/lexa-templates.webp",
       "/images/projects/lexa-2025/template-preview.webp",
       "/images/projects/lexa-2025/signing-desktop.webp",
