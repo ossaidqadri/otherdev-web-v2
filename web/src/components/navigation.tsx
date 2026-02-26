@@ -47,10 +47,33 @@ export function Navigation({
       {/* Mobile Navigation (or AI variant) */}
       <div
         className={cn(
-          "flex items-center gap-[6px] w-full pointer-events-auto relative z-50",
+          "flex items-center justify-between gap-[6px] w-full pointer-events-auto relative z-50",
           isAIVariant ? "" : "sm:hidden",
         )}
       >
+        <AnimatePresence mode="wait">
+          {!isOpen && (
+            <motion.div
+              key="otherdev-pill"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Button
+                asChild
+                variant="nav"
+                size="nav-default"
+                className={pathname === "/" ? "text-foreground" : ""}
+              >
+                <Link href="/" data-slot="nav-item">
+                  other dev
+                </Link>
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Hamburger/X Button */}
         <Button
           variant="nav"
@@ -86,29 +109,6 @@ export function Navigation({
         </Button>
 
         <AnimatePresence mode="wait">
-          {!isOpen && (
-            <motion.div
-              key="otherdev-pill"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Button
-                asChild
-                variant="nav"
-                size="nav-default"
-                className={pathname === "/" ? "text-foreground" : ""}
-              >
-                <Link href="/" data-slot="nav-item">
-                  Other dev
-                </Link>
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence mode="wait">
           {isOpen && (
             <motion.div
               key="menu-open"
@@ -132,7 +132,7 @@ export function Navigation({
                   }
                 >
                   <Link href="/work" data-slot="nav-item">
-                    Work
+                    work
                   </Link>
                 </Button>
               </motion.div>
@@ -151,7 +151,7 @@ export function Navigation({
                   }
                 >
                   <Link href="/about" data-slot="nav-item">
-                    About
+                    about
                   </Link>
                 </Button>
               </motion.div>
@@ -169,7 +169,7 @@ export function Navigation({
                   }
                 >
                   <Link href="/loom" data-slot="nav-item">
-                    Ai
+                    ai
                   </Link>
                 </Button>
               </motion.div>
@@ -187,11 +187,11 @@ export function Navigation({
                   }
                 >
                   <Link href="/work/ads-portfolio" data-slot="nav-item">
-                    Ads
+                    ads
                   </Link>
                 </Button>
               </motion.div>
-              <motion.div
+              {/* <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.27, duration: 0.3 }}
@@ -204,7 +204,7 @@ export function Navigation({
                 >
                   Contact
                 </Button>
-              </motion.div>
+              </motion.div> */}
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -217,7 +217,7 @@ export function Navigation({
                     rel="noopener noreferrer"
                     data-slot="nav-item"
                   >
-                    Whatsapp
+                    whatsapp
                   </Link>
                 </Button>
               </motion.div>
@@ -236,7 +236,7 @@ export function Navigation({
             className={pathname === "/" ? "text-foreground" : ""}
           >
             <Link href="/" data-slot="nav-item">
-              Other dev
+              other dev
             </Link>
           </Button>
 
@@ -247,7 +247,7 @@ export function Navigation({
             className={pathname?.startsWith("/work") ? "text-foreground" : ""}
           >
             <Link href="/work" data-slot="nav-item">
-              Work
+              work
             </Link>
           </Button>
 
@@ -258,7 +258,7 @@ export function Navigation({
             className={pathname?.startsWith("/about") ? "text-foreground" : ""}
           >
             <Link href="/about" data-slot="nav-item">
-              About
+              about
             </Link>
           </Button>
 
@@ -269,7 +269,7 @@ export function Navigation({
             className={pathname?.startsWith("/loom") ? "text-foreground" : ""}
           >
             <Link href="/loom" data-slot="nav-item">
-              Ai
+              ai
             </Link>
           </Button>
 
@@ -280,18 +280,18 @@ export function Navigation({
             className={pathname === "/work/ads-portfolio" ? "text-foreground" : ""}
           >
             <Link href="/work/ads-portfolio" data-slot="nav-item">
-              Ads
+              ads
             </Link>
           </Button>
 
-          <Button
+          {/* <Button
             variant="nav"
             size="nav-default"
             onClick={handleContactClick}
             data-slot="nav-item"
           >
             Contact
-          </Button>
+          </Button> */}
 
           <Button asChild variant="nav" size="nav-default">
             <Link
@@ -300,7 +300,7 @@ export function Navigation({
               rel="noopener noreferrer"
               data-slot="nav-item"
             >
-              Whatsapp
+              whatsapp
             </Link>
           </Button>
         </div>
@@ -315,7 +315,7 @@ export function Navigation({
           className="absolute right-3 top-0 pointer-events-auto bg-red-50/70 text-red-600 hover:text-red-700 hover:bg-red-100/70 flex items-center gap-1.5"
         >
           <Trash2 size={12} strokeWidth={2} />
-          Clear
+          clear
         </Button>
       )}
 
