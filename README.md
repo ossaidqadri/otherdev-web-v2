@@ -6,7 +6,7 @@ A modern agency website showcasing otherdev's work - a full-service web developm
 
 
 
-[![Next.js](https://img.shields.io/badge/Next.js-16.0-black)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16.1-black)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19.2-blue)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.1-38bdf8)](https://tailwindcss.com/)
@@ -17,8 +17,9 @@ otherdev produces digital platforms for pioneering creatives across fashion, des
 
 ### Key Highlights
 
-- **11+ Portfolio Projects** - Showcasing work for clients like Wish Apparels, Tiny Footprint Coffee, and Groovy Attires
+- **13+ Portfolio Projects** - Showcasing work for clients like Wish Apparels, Lexa, and Groovy
 - **Modern Stack** - Built with Next.js 16, React 19, and Tailwind CSS 4
+- **AI-Powered Features** - Custom assistant with artifact rendering and RAG capabilities
 - **Rich Interactions** - Smooth animations with Framer Motion
 - **Responsive Design** - Optimized for all devices
 - **Accessibility First** - Built with Radix UI primitives
@@ -41,10 +42,18 @@ otherdev produces digital platforms for pioneering creatives across fashion, des
 - **[Lucide React](https://lucide.dev/)** - Icon system
 - **[next-themes](https://github.com/pacocoursey/next-themes)** - Theme management
 
+### AI & Assistant
+
+- **[@assistant-ui/react](https://www.assistant-ui.com/)** - Custom AI assistant interface
+- **[@ai-sdk/groq](https://sdk.vercel.ai/)** - Groq AI integration
+- **[@huggingface/inference](https://huggingface.co/)** - HF model inference
+- **Shiki** - Syntax highlighting for code artifacts
+
 ### API & Data Fetching
 
 - **[tRPC](https://trpc.io/)** - End-to-end typesafe APIs
 - **[TanStack Query](https://tanstack.com/query)** - Powerful async state management
+- **[Zustand](https://zustand-demo.pmnd.rs/)** - Lightweight state management
 - **[SuperJSON](https://github.com/blitz-js/superjson)** - Enhanced JSON serialization
 
 ### Forms & Validation
@@ -95,18 +104,39 @@ bun dev
 
 ### Environment Variables
 
-For contact form functionality, create a `.env.local` file in the `web/` directory:
+Create a `.env.local` file in the `web/` directory:
 
 ```bash
-# Google Sheets Integration
+# Site
+NEXT_PUBLIC_SITE_URL=https://otherdev.com
+
+# Canvas API
+CANVAS_API_URL=https://client5.otherdev.com/canvas/v1/api/
+CANVAS_API_KEY=your-api-key
+CANVAS_PROJECT_ID=your-project-id
+
+# Google Services
 GOOGLE_CLIENT_EMAIL=your-service-account@project.iam.gserviceaccount.com
 GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 GOOGLE_SHEET_ID=your-google-sheet-id
 
-# Gmail Integration
+# Gmail
 GMAIL_USER=your-email@gmail.com
 GMAIL_APP_PASSWORD=your-app-password
-GMAIL_RECIPIENTS=recipient1@example.com,recipient2@example.com
+GMAIL_RECIPIENTS=email1@example.com,email2@example.com
+
+# AI Services
+GROQ_API_KEY=your-groq-api-key
+HUGGINGFACE_API_KEY=your-huggingface-api-key
+
+# Firebase Admin
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_CLIENT_EMAIL=your-service-account@project.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
+# RAG Configuration
+RAG_SIMILARITY_THRESHOLD=0.1
+RAG_MATCH_COUNT=10
 ```
 
 ## Project Structure
@@ -121,6 +151,8 @@ otherdev-v2/
 │   │   │   ├── work/             # Work showcase
 │   │   │   │   ├── page.tsx      # Projects listing
 │   │   │   │   └── [slug]/       # Individual project pages
+│   │   │   ├── blog/             # Blog listing and posts
+│   │   │   ├── loom/             # AI assistant chat interface
 │   │   │   ├── api/              # API routes
 │   │   │   │   └── trpc/[trpc]/  # tRPC HTTP handler
 │   │   │   └── layout.tsx        # Root layout with providers
@@ -129,12 +161,14 @@ otherdev-v2/
 │   │   │   ├── navigation.tsx    # Main navigation
 │   │   │   ├── project-card.tsx  # Project display card
 │   │   │   ├── contact-dialog.tsx # Contact form with tRPC
+│   │   │   ├── chat-widget.tsx   # AI assistant widget
+│   │   │   ├── artifact-renderer.tsx # Code artifact display
 │   │   │   └── providers.tsx     # tRPC & React Query providers
 │   │   ├── server/               # tRPC server code
 │   │   │   ├── trpc.ts           # tRPC initialization
 │   │   │   └── routers/          # API routers by feature
 │   │   │       ├── contact.ts    # Contact form handler
-│   │   │       └── index.ts      # Root app router
+│   │   │       └── content.ts    # Blog/content handler
 │   │   ├── hooks/                # Custom React hooks
 │   │   └── lib/                  # Utilities & data
 │   │       ├── projects.ts       # Project data & types
@@ -142,6 +176,8 @@ otherdev-v2/
 │   │       └── utils.ts          # Helper functions
 │   ├── public/                   # Static assets
 │   │   └── images/               # Project images & media
+│   ├── scripts/                  # Utility scripts
+│   │   └── ingest-documents.ts   # Document ingestion for RAG
 │   ├── biome.json                # Biome configuration
 │   ├── components.json           # Shadcn UI config
 │   ├── next.config.ts            # Next.js configuration
@@ -159,11 +195,13 @@ Run these commands from the `web/` directory:
 
 | Command | Description |
 |---------|-------------|
-| `bun dev` | Start development server on [http://localhost:3000](http://localhost:3000) |
-| `bun build` | Create optimized production build |
+| `bun dev` | Start development server |
+| `bun build` | Create production build |
 | `bun start` | Start production server |
-| `bun lint` | Run Biome linter checks |
+| `bun lint` | Run Biome linter |
 | `bun format` | Format code with Biome |
+| `bun run ingest` | Ingest documents for RAG |
+| `bun run clear` | Clear ingested documents |
 
 ## Features
 
@@ -172,6 +210,19 @@ Run these commands from the `web/` directory:
 - **Project Grid** - Responsive masonry layout displaying featured work
 - **Project Details** - Individual pages with media galleries and descriptions
 - **Categories** - SEO, branding, e-commerce, SaaS platforms, and enterprise solutions
+
+### Blog
+
+- **Dynamic Content** - CMS-powered blog posts via tRPC
+- **Markdown Rendering** - Shiki syntax highlighting with rehype/remark
+- **Category Filtering** - Organized content by topics
+
+### AI Assistant (Loom)
+
+- **Custom Chat Interface** - Built with @assistant-ui/react
+- **Artifact Rendering** - Inline code display with syntax highlighting
+- **RAG-Powered** - Context-aware responses from ingested documents
+- **Multi-Model Support** - Groq and HuggingFace integrations
 
 ### About Section
 
@@ -191,7 +242,7 @@ Run these commands from the `web/` directory:
 
 - **Server Components** - Leveraging React Server Components for performance
 - **tRPC API Layer** - End-to-end type-safe APIs with automatic validation
-- **React Query** - Optimized data fetching with built-in caching
+- **React Query + Zustand** - Optimized data fetching and state management
 - **Image Optimization** - Next.js Image component with WebP format
 - **Route Transitions** - Smooth navigation with App Router
 - **Type Safety** - Full TypeScript coverage from database to UI
@@ -204,9 +255,9 @@ otherdev has delivered digital solutions for:
 - **Bin Yousuf Group** - Real estate platform for premium waterfront properties
 - **Lexa** - AI-powered legal assistant platform
 - **Narkins Builders** - SEO optimization & website infrastructure
-- **Kiswa Noire** - E-commerce platform for Pakistani children's brand
 - **Finlit** - SaaS platform for financial literacy
 - **Wish Apparels** - Complete branding & e-commerce solution
+- **Groovy Pakistan** - E-commerce platform for menswear brand
 
 *And many more fashion, design, and enterprise clients.*
 
