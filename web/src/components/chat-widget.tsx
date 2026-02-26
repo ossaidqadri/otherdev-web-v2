@@ -70,6 +70,26 @@ export function ChatWidget() {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const cardRef = React.useRef<HTMLDivElement>(null);
 
+  const applySuggestion = React.useCallback(() => {
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+        HTMLTextAreaElement.prototype,
+        "value",
+      )?.set;
+
+      if (nativeInputValueSetter) {
+        nativeInputValueSetter.call(textarea, suggestion);
+        const inputEvent = new Event("input", { bubbles: true });
+        textarea.dispatchEvent(inputEvent);
+      }
+
+      setInput(suggestion);
+      setSuggestion("");
+      textarea.focus();
+    }
+  }, [suggestion]);
+
   const {
     containerRef,
     scrollToBottom,
@@ -704,57 +724,18 @@ export function ChatWidget() {
                       />
                     </ScrollArea>
                     {suggestion && !input && (
-                      <div
-                        onClick={() => {
-                          if (textareaRef.current) {
-                            const textarea = textareaRef.current;
-                            const nativeInputValueSetter =
-                              Object.getOwnPropertyDescriptor(
-                                HTMLTextAreaElement.prototype,
-                                "value",
-                              )?.set;
-
-                            if (nativeInputValueSetter) {
-                              nativeInputValueSetter.call(textarea, suggestion);
-                              const inputEvent = new Event("input", {
-                                bubbles: true,
-                              });
-                              textarea.dispatchEvent(inputEvent);
-                            }
-
-                            setInput(suggestion);
-                            setSuggestion("");
-                            textarea.focus();
-                          }
-                        }}
+                      <button
+                        type="button"
+                        onClick={applySuggestion}
                         onTouchEnd={(e) => {
                           e.preventDefault();
-                          if (textareaRef.current) {
-                            const textarea = textareaRef.current;
-                            const nativeInputValueSetter =
-                              Object.getOwnPropertyDescriptor(
-                                HTMLTextAreaElement.prototype,
-                                "value",
-                              )?.set;
-
-                            if (nativeInputValueSetter) {
-                              nativeInputValueSetter.call(textarea, suggestion);
-                              const inputEvent = new Event("input", {
-                                bubbles: true,
-                              });
-                              textarea.dispatchEvent(inputEvent);
-                            }
-
-                            setInput(suggestion);
-                            setSuggestion("");
-                            textarea.focus();
-                          }
+                          applySuggestion();
                         }}
                         className="absolute left-3 top-3 cursor-pointer text-base text-muted-foreground md:hidden"
                         style={{ pointerEvents: "auto" }}
                       >
                         {suggestion}
-                      </div>
+                      </button>
                     )}
                     <button
                       type="submit"
