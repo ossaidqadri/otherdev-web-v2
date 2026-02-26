@@ -727,7 +727,31 @@ export function ChatWidget() {
                             textarea.focus();
                           }
                         }}
-                        className="absolute left-3 top-3 cursor-pointer text-base text-muted-foreground md:hidden pointer-events-auto"
+                        onTouchEnd={(e) => {
+                          e.preventDefault();
+                          if (textareaRef.current) {
+                            const textarea = textareaRef.current;
+                            const nativeInputValueSetter =
+                              Object.getOwnPropertyDescriptor(
+                                HTMLTextAreaElement.prototype,
+                                "value",
+                              )?.set;
+
+                            if (nativeInputValueSetter) {
+                              nativeInputValueSetter.call(textarea, suggestion);
+                              const inputEvent = new Event("input", {
+                                bubbles: true,
+                              });
+                              textarea.dispatchEvent(inputEvent);
+                            }
+
+                            setInput(suggestion);
+                            setSuggestion("");
+                            textarea.focus();
+                          }
+                        }}
+                        className="absolute left-3 top-3 cursor-pointer text-base text-muted-foreground md:hidden"
+                        style={{ pointerEvents: "auto" }}
                       >
                         {suggestion}
                       </div>

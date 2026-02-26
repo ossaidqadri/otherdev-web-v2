@@ -347,8 +347,8 @@ export function OtherDevLoomThread() {
                 <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
                   {SUGGESTED_PROMPTS.map((suggestion) => (
                     <SuggestionButton
-                      key={suggestion.display}
-                      display={suggestion.display}
+                      key={suggestion.label}
+                      display={suggestion.label}
                       prompt={suggestion.prompt}
                     />
                   ))}
@@ -415,6 +415,10 @@ export function OtherDevLoomThread() {
             <button
               type="button"
               onClick={applySuggestion}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                applySuggestion();
+              }}
               className="absolute left-3 top-2.5 font-sans text-sm text-muted-foreground hover:opacity-80 transition-opacity sm:left-4 sm:top-3 sm:text-base md:hidden"
             >
               {suggestion}
