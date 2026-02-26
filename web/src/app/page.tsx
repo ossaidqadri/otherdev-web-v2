@@ -68,11 +68,8 @@ export default function Home() {
       <Navigation />
       <main className="container mx-auto px-3 pr-3 md:pr-[8%] lg:pr-[15%] pt-[60px] pb-12">
         <div className="grid grid-cols-12 mb-8">
-          <p className="text-[#686868] text-[11px] leading-[14px] font-normal col-span-7 sm:col-span-8 md:col-span-7 lg:col-span-6">
-            otherdev produces digital platforms for pioneering creatives.
-            <br />
-            Based in Karachi City, we are a full-service web development and
-            design studio specializing in the fashion and design fields.
+          <p className="text-[#686868] text-[11px] leading-[14px] font-normal col-span-12 sm:col-span-8 md:col-span-7 lg:col-span-6">
+            otherdev produces digital platforms for pioneering creatives. Based in Karachi City, we are a full-service web development and design studio specializing in the fashion and design fields.
           </p>
         </div>
         <ShuffledProjectGrid initialData={data} />
