@@ -1,4 +1,4 @@
-import Error from '@/components/shadcn-studio/blocks/error-page-01/error-page-01'
+import Error from '@/components/error-page'
 
 const ErrorPage = () => {
   return <Error />
