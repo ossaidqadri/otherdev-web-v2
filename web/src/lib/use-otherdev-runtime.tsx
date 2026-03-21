@@ -10,19 +10,18 @@ import type {
 import { useExternalStoreRuntime } from "@assistant-ui/react";
 import { useCallback, useRef, useState } from "react";
 import { useLocalStorageMessages } from "@/hooks/use-local-storage-messages";
+import type { ContentBlock } from "@/lib/content-types";
 
 const LOOM_STORAGE_KEY = "otherdev-loom-messages";
 
 type ContentPart = TextMessagePart | ToolCallMessagePart;
 type MessageStatus = ThreadAssistantMessage["status"];
 
-// Content parts that can be appended from file attachments
-type ImageUrlMessagePart = {
-  type: "image_url";
-  image_url: { url: string };
-};
-
-export type AppendableContentPart = TextMessagePart | ImageUrlMessagePart;
+/**
+ * AppendableContentPart is an alias for ContentBlock, representing
+ * content that can be appended from file attachments (text and image blocks).
+ */
+export type AppendableContentPart = ContentBlock;
 
 function serializeLoomMessages(messages: ThreadMessage[]): string {
   return JSON.stringify(

@@ -11,6 +11,7 @@ import { createArtifactTool } from "@/server/lib/artifact-tool";
 import { stripMarkdown } from "@/lib/utils";
 import { selectModel, formatMessagesForGroq, validateImageContent, type Message } from "./helpers";
 
+// Zod schemas for validating content blocks (matching shared ContentBlock types)
 const TextBlockSchema = z.object({
   type: z.literal("text"),
   text: z.string(),

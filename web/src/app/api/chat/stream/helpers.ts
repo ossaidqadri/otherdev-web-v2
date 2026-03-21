@@ -1,16 +1,6 @@
-export type ContentBlock =
-  | {
-      type: "text";
-      text: string;
-    }
-  | {
-      type: "image_url";
-      image_url: {
-        url: string;
-      };
-    };
+import type { ContentBlock, MessageContent } from "@/lib/content-types";
 
-export type MessageContent = string | ContentBlock[];
+export type { ContentBlock, MessageContent };
 
 export interface Message {
   role: "user" | "assistant";
