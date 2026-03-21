@@ -54,6 +54,10 @@ import {
   extractTextFromFile,
 } from "@/lib/file-processor";
 
+type ContentBlock =
+  | { type: "image_url"; image_url: { url: string } }
+  | { type: "text"; text: string };
+
 function cleanSuggestionMarkers(content: string): string {
   return content.replace(/\s*SUGGESTION:[\s\S]*$/i, "").trim();
 }
@@ -284,7 +288,7 @@ export function OtherDevLoomThread() {
 
     try {
       setIsProcessingFiles(true);
-      const contentBlocks: any[] = [];
+      const contentBlocks: ContentBlock[] = [];
 
       for (const file of attachedFiles) {
         if (file.type.startsWith("image/")) {
@@ -320,7 +324,7 @@ export function OtherDevLoomThread() {
     if (!transcript) return;
 
     try {
-      const contentBlocks = [
+      const contentBlocks: ContentBlock[] = [
         {
           type: "text",
           text: `[Voice Message] ${transcript}`,
@@ -329,8 +333,10 @@ export function OtherDevLoomThread() {
 
       appendFileContent(contentBlocks);
       setTranscript("");
+      setFileError("");
     } catch (error) {
-      console.error("Error sending transcript:", error);
+      const message = error instanceof Error ? error.message : "Failed to send voice message";
+      setFileError(message);
     }
   };
 
