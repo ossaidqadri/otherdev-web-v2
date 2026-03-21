@@ -9,14 +9,33 @@ import {
 } from "@/server/lib/rate-limit";
 import { createArtifactTool } from "@/server/lib/artifact-tool";
 import { stripMarkdown } from "@/lib/utils";
+import { selectModel, formatMessagesForGroq, validateImageContent, type Message } from "./helpers";
+
+const TextBlockSchema = z.object({
+  type: z.literal("text"),
+  text: z.string(),
+});
+
+const ImageBlockSchema = z.object({
+  type: z.literal("image_url"),
+  image_url: z.object({
+    url: z.string().url(),
+  }),
+});
+
+const ContentBlockSchema = z.union([TextBlockSchema, ImageBlockSchema]);
 
 const MessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
-  content: z.string(),
+  content: z.union([
+    z.string(),
+    z.array(ContentBlockSchema),
+  ]),
 });
 
 const RequestSchema = z.object({
   messages: z.array(MessageSchema).min(1),
+  hasImageContent: z.boolean().optional(),
 });
 
 const groq = new Groq({
@@ -216,14 +235,27 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    const { messages } = validation.data;
+    const { messages, hasImageContent } = validation.data;
     const lastUserMessage = messages.filter((m) => m.role === "user").pop();
 
     if (!lastUserMessage) {
       return createJsonResponse({ error: "No user message found" }, 400);
     }
 
-    const sanitizedQuery = sanitizeInput(lastUserMessage.content);
+    const typedMessages: Message[] = messages.map(m => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    validateImageContent(typedMessages, hasImageContent);
+
+    const lastUserContent = typeof lastUserMessage.content === "string"
+      ? lastUserMessage.content
+      : lastUserMessage.content.map(block =>
+          block.type === "text" ? block.text : "[Image content]"
+        ).join(" ");
+
+    const sanitizedQuery = sanitizeInput(lastUserContent);
     const normalizedQuery = sanitizedQuery.replace(/otherdev/gi, "Other Dev");
 
     const queryQuality = detectQueryQuality(normalizedQuery);
@@ -241,16 +273,22 @@ export async function POST(request: Request): Promise<Response> {
 
     const systemPrompt = SYSTEM_PROMPT_TEMPLATE.replace("{context}", context);
 
+    const selectedModel = selectModel(hasImageContent);
+
+    const formattedMessages = formatMessagesForGroq(typedMessages, hasImageContent).map((m) => ({
+      role: m.role as "user" | "assistant",
+      content: typeof m.content === "string"
+        ? sanitizeInput(m.content)
+        : m.content,
+    }));
+
     const chatMessages = [
       { role: "system" as const, content: systemPrompt },
-      ...messages.map((m) => ({
-        role: m.role as "user" | "assistant",
-        content: sanitizeInput(m.content),
-      })),
+      ...formattedMessages,
     ];
 
     const completion = await groq.chat.completions.create({
-      model: "openai/gpt-oss-20b",
+      model: selectedModel,
       messages: chatMessages,
       temperature: 0.7,
       max_tokens: 8000,
