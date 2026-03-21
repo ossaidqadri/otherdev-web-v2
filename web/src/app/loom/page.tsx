@@ -26,6 +26,7 @@ export function useArtifact() {
 interface RuntimeContextType {
   suggestion: string;
   setSuggestion: (suggestion: string) => void;
+  appendFileContent: (contentBlocks: any[]) => void;
 }
 
 const RuntimeContext = createContext<RuntimeContextType | null>(null);
@@ -58,6 +59,7 @@ export default function AIPage() {
             value={{
               suggestion: runtime.suggestion,
               setSuggestion: runtime.setSuggestion,
+              appendFileContent: runtime.appendFileContent,
             }}
           >
             <ArtifactContext.Provider

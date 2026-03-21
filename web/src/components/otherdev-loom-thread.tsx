@@ -8,7 +8,7 @@ import {
   useMessage,
 } from "@assistant-ui/react";
 import type { ToolCallMessagePart } from "@assistant-ui/react";
-import { ArrowUp, FileCode2, Paperclip, ChevronRight } from "lucide-react";
+import { ArrowUp, FileCode2, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,14 @@ import { useArtifact, useRuntimeContext } from "@/app/loom/page";
 import { CREATE_ARTIFACT_TOOL_NAME } from "@/server/lib/artifact-tool";
 import { SUGGESTED_PROMPTS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { FileAttachmentButton } from "@/components/file-attachment-button";
+import { VoiceRecorderButton } from "@/components/voice-recorder-button";
+import { FilePreview } from "@/components/file-preview";
+import { TranscriptPreview } from "@/components/transcript-preview";
+import {
+  encodeImageToBase64,
+  extractTextFromFile,
+} from "@/lib/file-processor";
 
 function cleanSuggestionMarkers(content: string): string {
   return content.replace(/\s*SUGGESTION:[\s\S]*$/i, "").trim();
@@ -244,10 +252,95 @@ function setNativeInputValue(input: HTMLTextAreaElement, value: string): void {
 }
 
 export function OtherDevLoomThread() {
-  const { suggestion, setSuggestion } = useRuntimeContext();
+  const { suggestion, setSuggestion, appendFileContent } = useRuntimeContext();
   const api = useAssistantApi();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [inputValue, setInputValue] = useState("");
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [transcript, setTranscript] = useState("");
+  const [isProcessingFiles, setIsProcessingFiles] = useState(false);
+  const [fileError, setFileError] = useState("");
+
+  const handleFilesSelected = async (files: File[]) => {
+    try {
+      setFileError("");
+      setIsProcessingFiles(true);
+      setAttachedFiles(files);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to process files";
+      setFileError(message);
+      setAttachedFiles([]);
+    } finally {
+      setIsProcessingFiles(false);
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleFilesSubmit = async () => {
+    if (attachedFiles.length === 0) return;
+
+    try {
+      setIsProcessingFiles(true);
+      const contentBlocks: any[] = [];
+
+      for (const file of attachedFiles) {
+        if (file.type.startsWith("image/")) {
+          const dataUri = await encodeImageToBase64(file);
+          contentBlocks.push({
+            type: "image_url",
+            image_url: { url: dataUri },
+          });
+        } else {
+          const text = await extractTextFromFile(file);
+          contentBlocks.push({
+            type: "text",
+            text: `[File: ${file.name}]\n${text}`,
+          });
+        }
+      }
+
+      appendFileContent(contentBlocks);
+      setAttachedFiles([]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to process files";
+      setFileError(message);
+    } finally {
+      setIsProcessingFiles(false);
+    }
+  };
+
+  const handleTranscriptReceived = (text: string) => {
+    setTranscript(text);
+  };
+
+  const handleTranscriptAccept = async () => {
+    if (!transcript) return;
+
+    try {
+      const contentBlocks = [
+        {
+          type: "text",
+          text: `[Voice Message] ${transcript}`,
+        },
+      ];
+
+      appendFileContent(contentBlocks);
+      setTranscript("");
+    } catch (error) {
+      console.error("Error sending transcript:", error);
+    }
+  };
+
+  const handleTranscriptReject = () => {
+    setTranscript("");
+  };
+
+  const handleRecorderError = (error: string) => {
+    setFileError(error);
+  };
 
   const handleSubmit = () => {
     const value = inputRef.current?.value?.trim();
@@ -392,6 +485,58 @@ export function OtherDevLoomThread() {
       </ChatContainerRoot>
 
       <div className="absolute bottom-0 left-0 right-0 z-10 p-3 sm:p-4 w-full max-w-3xl mx-auto pointer-events-none">
+        <div className="space-y-3 pointer-events-auto">
+          {fileError && (
+            <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive flex items-center justify-between">
+              <span>{fileError}</span>
+              <button
+                onClick={() => setFileError("")}
+                className="text-destructive hover:opacity-70 transition-opacity"
+              >
+                ×
+              </button>
+            </div>
+          )}
+
+          {attachedFiles.length > 0 && (
+            <div className="space-y-2 rounded-lg border border-border bg-card/50 p-3">
+              <FilePreview
+                files={attachedFiles}
+                onRemove={handleRemoveFile}
+              />
+              <div className="flex gap-2 pt-2">
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={handleFilesSubmit}
+                  disabled={isProcessingFiles}
+                  className="gap-2"
+                >
+                  Send Files
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setAttachedFiles([])}
+                  disabled={isProcessingFiles}
+                  className="gap-2"
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {transcript && (
+            <TranscriptPreview
+              transcript={transcript}
+              onAccept={handleTranscriptAccept}
+              onReject={handleTranscriptReject}
+              isProcessing={isProcessingFiles}
+            />
+          )}
+        </div>
+
         <PromptInput
           className="rounded-2xl border-border shadow-sm pointer-events-auto"
           disabled={false}
@@ -414,15 +559,21 @@ export function OtherDevLoomThread() {
             </button>
           )}
           <PromptInputActions className="w-full justify-between">
-            <PromptInputAction tooltip="Attach file">
-              <button
-                type="button"
-                className="flex h-6 w-6 items-center justify-center text-muted-foreground hover:opacity-70 transition-opacity sm:h-7 sm:w-7"
-                aria-label="Attach file"
-              >
-                <Paperclip className="h-4 w-4 sm:h-5 sm:w-5" />
-              </button>
-            </PromptInputAction>
+            <div className="flex gap-2">
+              <PromptInputAction tooltip="Attach file">
+                <FileAttachmentButton
+                  onFilesSelected={handleFilesSelected}
+                  disabled={isProcessingFiles}
+                />
+              </PromptInputAction>
+              <PromptInputAction tooltip="Record voice message">
+                <VoiceRecorderButton
+                  onTranscript={handleTranscriptReceived}
+                  onError={handleRecorderError}
+                  disabled={isProcessingFiles}
+                />
+              </PromptInputAction>
+            </div>
             <PromptInputAction tooltip="Send message (Enter)">
               <button
                 type="button"
