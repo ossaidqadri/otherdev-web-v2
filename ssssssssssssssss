@@ -1,0 +1,240 @@
+[33mcommit 978e7b9ae4efd46c1df61d15477007c7936bf3b3[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: imossaidqadri <imossaidquadri@gmail.com>
+Date:   Sun Mar 22 02:37:00 2026 +0500
+
+    feat: update adina-household project images and refine AI chat components
+    
+    - Add images 5-7 and update existing images for adina-household-2026 project
+    - Update artifact-renderer, chat-widget, loom-thread, and prompt-suggestions components
+    - Refine artifact-tool, embeddings, and reasoning-tool server libs
+    - Remove stale backup files (route.old.ts, knowledge-base.backup.ts)
+
+[33mcommit af5d3dfabe3df7b1cd872eb9ac897c4e7929f42f[m[33m ([m[1;31m2/main[m[33m, [m[1;31m2/HEAD[m[33m)[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Thu Feb 26 17:20:46 2026 +0500
+
+    trigger deloyment
+
+[33mcommit 2c387fc62e2f6228426e07cb766efeb36a1d3de0[m
+Author: imossaidqadri <imossaidquadri@gmail.com>
+Date:   Thu Feb 26 17:18:53 2026 +0500
+
+    fix(chat): resolve React internal error by using button element
+
+[33mcommit 77919e32312be55e55902b0a775177722880fc38[m
+Author: imossaidqadri <imossaidquadri@gmail.com>
+Date:   Thu Feb 26 17:13:05 2026 +0500
+
+    fix(chat): restore elaborate prompts and fix mobile tap behavior
+
+[33mcommit e66dfd1cbb987f4988d0186c38a5ec646d3ea9b0[m
+Author: imossaidqadri <imossaidquadri@gmail.com>
+Date:   Thu Feb 26 07:27:31 2026 +0500
+
+    docs: update READMEs with AI features and latest stack
+
+[33mcommit c6925d6d121a0a6949115c167775853980058e9d[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Thu Feb 26 06:32:05 2026 +0500
+
+    error page
+
+[33mcommit 73764c89d3ddcfbfb179c29625ba332812ee18ac[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Thu Feb 26 06:31:35 2026 +0500
+
+    error page
+
+[33mcommit 6b0277f5279e6bf146648f91c65b55cc6a16a2e9[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Thu Feb 26 06:27:56 2026 +0500
+
+    error page
+
+[33mcommit d9429736131398035c4e17c025f3141977b1ff40[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Thu Feb 26 06:07:15 2026 +0500
+
+    ui fixes
+
+[33mcommit 3b4aff36f1e7c65593c29f83abed9b4b7bcaff7a[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Tue Feb 24 15:31:29 2026 +0500
+
+    og imgs
+
+[33mcommit cc76feee8b7ccc08e766961ab2210197bf7106aa[m
+Merge: 7c7a30e e2a26e3
+Author: imossaidqadri <imossaidquadri@gmail.com>
+Date:   Tue Feb 24 15:30:41 2026 +0500
+
+    Merge branch 'main' of https://github.com/kabeer11000/otherdev-web-v2
+
+[33mcommit 7c7a30e9bb4f33e6d6bd4a77acec5ff19c9f3c37[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Tue Feb 24 15:29:34 2026 +0500
+
+    og imgs
+
+[33mcommit e2a26e3f8bf55355dc994ea0e031d78e66060cd9[m
+Author: Ossaid <imossaidquadri@gmail.com>
+Date:   Fri Feb 20 06:58:53 2026 +0500
+
+    Update projects.ts
+
+[33mcommit f978558d2b24e396e78cb82949e9e1c7b9f2a115[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Fri Feb 20 06:44:36 2026 +0500
+
+    removed lexa pngs
+
+[33mcommit 268f2c7be18961c38467db073c2f81ebc4bf6c8b[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Fri Feb 20 06:42:40 2026 +0500
+
+    removed lexa pngs
+
+[33mcommit f68e0b801abe4492086907c0d192852da5d8f76f[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Fri Feb 20 06:42:05 2026 +0500
+
+    updated lexa images
+
+[33mcommit 45d6b197c0c3cfc0f4cbecbb23ae80886547b558[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Thu Feb 19 23:03:03 2026 +0500
+
+    visual retouch
+
+[33mcommit d40925ef225ec6da22cf2f4f4d9311e08308f9bb[m
+Author: imossaidqadri <imossaidquadri@gmail.com>
+Date:   Thu Feb 19 23:02:11 2026 +0500
+
+    visual retouch
+
+[33mcommit 6d948baea17eb81e8267771a7ecd43bf41040b9e[m
+Author: imossaidqadri <imossaidquadri@gmail.com>
+Date:   Thu Feb 19 22:37:46 2026 +0500
+
+    added adina household
+
+[33mcommit 5c301aee06b771f0921657c9f3969a1c2ce64dbb[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Thu Feb 19 16:48:32 2026 +0500
+
+    changed ads pdf file
+
+[33mcommit 8a9e2afd9f8e733f3cb8841a7692c84ebb4c8548[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Tue Feb 17 00:56:15 2026 +0500
+
+    fixed env vars less build error
+
+[33mcommit 4e9e11f44425a4bfa546b244bfbe942acd0a16b1[m
+Author: imossaidqadri <imossaidquadri@gmail.com>
+Date:   Tue Feb 17 00:53:20 2026 +0500
+
+    fixed env vars less build error
+
+[33mcommit 948a9e7f8e78800221772d8075356fc2b5610cb6[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Mon Feb 16 16:06:08 2026 +0500
+
+    added ads portfolio
+
+[33mcommit 2cf0803d58a642ab2ec1c4b7d918b5438541973f[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Fri Feb 13 00:53:36 2026 +0500
+
+    updated GA4
+
+[33mcommit a1222b5261546b998f96b29c6c45144bcef37c50[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Fri Feb 13 00:50:59 2026 +0500
+
+    added GA4
+
+[33mcommit 544ff45f8b47e58a887959bc780e88e6f5da3380[m
+Author: imossaidqadri <imossaidquadri@gmail.com>
+Date:   Thu Feb 12 22:13:02 2026 +0500
+
+    feat: migrate vector store from Supabase to Firebase Firestore
+    
+    Replace Supabase pgvector with Firebase Firestore Vector Search for the RAG chat system. Remove all Mastra integration files as they were an unused alternative pipeline.
+    
+    - Rewrite vector-search.ts to use firebase-admin with Firestore findNearest()
+    - Add firebase-admin, remove @supabase/supabase-js and all @mastra/* packages
+    - Delete Mastra source files, Supabase SQL migrations, and Supabase-specific debug scripts
+    - Update .env.example with Firebase service account vars
+    - Provision Firestore database (asia-south1), service account, and vector index via gcloud
+
+[33mcommit 0315f6026dfbaf4fe1cf18547f75faf278df8ac9[m
+Author: imossaidqadri <imossaidquadri@gmail.com>
+Date:   Fri Jan 16 18:07:06 2026 +0500
+
+    feat: Implement Next.js root layout with SEO metadata, favicons, global providers, and a chat widget.
+
+[33mcommit bbe5d56f3eb9c63073d0becf8e04972ae92d77cc[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Fri Jan 16 07:18:44 2026 +0500
+
+    feature: added metadata filtering for work page
+
+[33mcommit e5f215475d86834298d81721893ba49c505153e2[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Fri Jan 16 07:12:38 2026 +0500
+
+    trigger deployment
+
+[33mcommit f49ecf8764a2f85d20dad671621e09c6d5cbb6d9[m
+Author: Kabeer Jaffri <kabeer11000@gmail.com>
+Date:   Fri Jan 16 07:05:57 2026 +0500
+
+    trigger deployment
+
+[33mcommit 9cd51b614e1075f8244e6e91176121e80df2d17d[m
+Author: imossaidqadri <imossaidquadri@gmail.com>
+Date:   Fri Jan 16 07:00:27 2026 +0500
+
+    chore: added new projects
+
+[33mcommit ae1244b6c77d92ca164c8d77aa6b037d8d1d7384[m
+Author: imossaidqadri <imossaidquadri@gmail.com>
+Date:   Fri Jan 16 06:54:33 2026 +0500
+
+    chore: added new projects
+
+[33mcommit de696829d88e16d7f1558eb5d33e554adaf02004[m
+Author: imossaidqadri <imossaidquadri@gmail.com>
+Date:   Tue Jan 13 06:36:48 2026 +0500
+
+    update: global.css
+
+[33mcommit f09f9fdc97df7c38ae3ce7101e691793ef7fe3b2[m
+Author: imossaidqadri <imossaidquadri@gmail.com>
+Date:   Tue Jan 13 06:18:33 2026 +0500
+
+    update: replace favicon with png version and update metadata
+
+[33mcommit 24286f7222a3c54ad2de080fe48913b02e7bf8e9[m
+Author: imossaidqadri <imossaidquadri@gmail.com>
+Date:   Sun Jan 11 13:12:52 2026 +0500
+
+    feat(loom): replace user avatar with custom loom-avatar.svg
+    
+    - Replace placeholder shadcn avatar with custom loom-avatar.svg
+    - Increase avatar size to h-12 w-12 (48px) for better visibility
+    - Remove responsive sizing for consistent appearance across devices
+    - Add new loom-avatar.svg asset to public directory
+
+[33mcommit 7dbf14f831f67f39ede56fcec77ade0ba8048fd8[m
+Author: imossaidqadri <imossaidquadri@gmail.com>
+Date:   Sun Jan 11 13:05:00 2026 +0500
+
+    feat(artifact): add Shiki syntax highlighting to code viewer
+    
+    - Integrate Shiki for beautiful HTML syntax highlighting in code tab
+    - Support automatic theme switching (github-light/github-dark)
+    - Add async code highlighting with error handling and fallback
+    - Remove debug logging from button handlers
+    - Improve code readability

@@ -16,6 +16,14 @@ const LOOM_STORAGE_KEY = "otherdev-loom-messages";
 type ContentPart = TextMessagePart | ToolCallMessagePart;
 type MessageStatus = ThreadAssistantMessage["status"];
 
+// Content parts that can be appended from file attachments
+type ImageUrlMessagePart = {
+  type: "image_url";
+  image_url: { url: string };
+};
+
+export type AppendableContentPart = TextMessagePart | ImageUrlMessagePart;
+
 function serializeLoomMessages(messages: ThreadMessage[]): string {
   return JSON.stringify(
     messages.map((msg) => ({
@@ -75,6 +83,8 @@ export function useOtherDevRuntime() {
   });
   const [isRunning, setIsRunning] = useState(false);
   const [suggestion, setSuggestion] = useState("");
+  const [composedContent, setComposedContent] = useState<AppendableContentPart[]>([]);
+  const [hasImageContent, setHasImageContent] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const onNew = useCallback(
@@ -313,6 +323,20 @@ export function useOtherDevRuntime() {
     [messages, setMessages],
   );
 
+  const appendFileContent = useCallback(
+    (contentBlocks: AppendableContentPart[]) => {
+      // Check if any blocks contain image content
+      const hasImages = contentBlocks.some(
+        (block) => block.type === "image_url"
+      );
+
+      // Update composed content and flags
+      setComposedContent(contentBlocks);
+      setHasImageContent(hasImages);
+    },
+    []
+  );
+
   const onCancel = useCallback(async () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -340,5 +364,9 @@ export function useOtherDevRuntime() {
     suggestion,
     setSuggestion,
     clear,
+    appendFileContent,
+    composedContent,
+    hasImageContent,
+    setComposedContent,
   };
 }
