@@ -44,11 +44,12 @@ const groq = new Groq({
 
 const RAG_MAX_MESSAGE_LENGTH = Number.parseInt(
   process.env.RAG_MAX_MESSAGE_LENGTH || "500",
+  10
 );
 const RAG_SIMILARITY_THRESHOLD = Number.parseFloat(
   process.env.RAG_SIMILARITY_THRESHOLD || "0.1",
 );
-const RAG_MATCH_COUNT = Number.parseInt(process.env.RAG_MATCH_COUNT || "10");
+const RAG_MATCH_COUNT = Number.parseInt(process.env.RAG_MATCH_COUNT || "10", 10);
 
 const DANGEROUS_PATTERNS = [
   /\[INST\]/gi,
@@ -275,7 +276,7 @@ export async function POST(request: Request): Promise<Response> {
 
     const selectedModel = selectModel(hasImageContent);
 
-    const formattedMessages = formatMessagesForGroq(typedMessages, hasImageContent).map((m) => ({
+    const formattedMessages = formatMessagesForGroq(typedMessages).map((m) => ({
       role: m.role as "user" | "assistant",
       content: typeof m.content === "string"
         ? sanitizeInput(m.content)
@@ -312,13 +313,11 @@ export async function POST(request: Request): Promise<Response> {
           let fullContent = "";
           let contentBeforeSuggestion = "";
           let suggestionDetected = false;
-          let accumulatedReasoning = "";
 
           for await (const chunk of completion) {
             const delta = chunk.choices[0]?.delta;
 
             if (delta?.reasoning) {
-              accumulatedReasoning += delta.reasoning;
               const data = JSON.stringify({
                 type: "reasoning",
                 content: delta.reasoning,
