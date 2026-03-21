@@ -95,16 +95,21 @@ export function useOtherDevRuntime() {
       const userMessage: ThreadMessage = {
         id: `user-${Date.now()}`,
         role: "user",
-        content: [textContent],
+        content: [
+          textContent,
+          ...composedContent,
+        ],
         createdAt: new Date(),
         attachments: [],
         metadata: {
-          custom: {},
+          custom: { hasImageContent },
         },
       };
 
       setMessages((prev) => [...prev, userMessage]);
       setIsRunning(true);
+      setComposedContent([]);
+      setHasImageContent(false);
 
       abortControllerRef.current = new AbortController();
       const assistantMessageId = `assistant-${Date.now()}`;
@@ -119,7 +124,7 @@ export function useOtherDevRuntime() {
         const response = await fetch("/api/chat/stream", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: apiMessages }),
+          body: JSON.stringify({ messages: apiMessages, hasImageContent }),
           signal: abortControllerRef.current.signal,
         });
 
@@ -320,7 +325,7 @@ export function useOtherDevRuntime() {
         abortControllerRef.current = null;
       }
     },
-    [messages, setMessages],
+    [messages, setMessages, composedContent, hasImageContent],
   );
 
   const appendFileContent = useCallback(

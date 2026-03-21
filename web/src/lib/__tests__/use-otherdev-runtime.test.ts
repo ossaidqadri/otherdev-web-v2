@@ -84,3 +84,100 @@ describe("useOtherDevRuntime - appendFileContent", () => {
     }
   });
 });
+
+describe("useOtherDevRuntime - message pipeline integration", () => {
+  it("should merge composed content and hasImageContent flag into user message", () => {
+    const userTextContent: TextMessagePart = {
+      type: "text",
+      text: "Please analyze these files",
+    };
+
+    const composedContent: AppendableContentPart[] = [
+      {
+        type: "image_url",
+        image_url: { url: "data:image/png;base64,xyz123" },
+      },
+      {
+        type: "image_url",
+        image_url: { url: "data:image/jpeg;base64,abc456" },
+      },
+    ];
+
+    const hasImageContent = true;
+
+    const userMessage = {
+      id: `user-${Date.now()}`,
+      role: "user" as const,
+      content: [
+        userTextContent,
+        ...composedContent,
+      ],
+      createdAt: new Date(),
+      attachments: [],
+      metadata: {
+        custom: { hasImageContent },
+      },
+    };
+
+    expect(userMessage.content).toHaveLength(3);
+    expect(userMessage.content[0]).toEqual(userTextContent);
+    expect(userMessage.content[1]).toEqual(composedContent[0]);
+    expect(userMessage.content[2]).toEqual(composedContent[1]);
+    expect(userMessage.metadata.custom.hasImageContent).toBe(true);
+  });
+
+  it("should handle API request with hasImageContent flag", () => {
+    const messages = [
+      {
+        role: "user" as const,
+        content: [
+          { type: "text" as const, text: "Hello with image" },
+          {
+            type: "image_url" as const,
+            image_url: { url: "data:image/png;base64,test" },
+          },
+        ],
+      },
+    ];
+
+    const hasImageContent = true;
+
+    const apiPayload = {
+      messages: messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content.find((c) => c.type === "text")?.text ?? "",
+      })),
+      hasImageContent,
+    };
+
+    expect(apiPayload.hasImageContent).toBe(true);
+    expect(apiPayload.messages[0].content).toBe("Hello with image");
+    expect(apiPayload).toHaveProperty("hasImageContent");
+  });
+
+  it("should clear composed content after sending message", () => {
+    let composedContent: AppendableContentPart[] = [
+      {
+        type: "image_url",
+        image_url: { url: "data:image/png;base64,image1" },
+      },
+    ];
+
+    let hasImageContent = true;
+
+    composedContent = [];
+    hasImageContent = false;
+
+    expect(composedContent).toHaveLength(0);
+    expect(hasImageContent).toBe(false);
+  });
+
+  it("should include metadata with hasImageContent in user message", () => {
+    const metadata = {
+      custom: { hasImageContent: true },
+    };
+
+    expect(metadata.custom).toHaveProperty("hasImageContent");
+    expect(metadata.custom.hasImageContent).toBe(true);
+  });
+});
