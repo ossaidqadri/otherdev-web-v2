@@ -372,6 +372,5 @@ export function useOtherDevRuntime() {
     appendFileContent,
     composedContent,
     hasImageContent,
-    setComposedContent,
   };
 }

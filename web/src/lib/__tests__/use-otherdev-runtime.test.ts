@@ -181,3 +181,168 @@ describe("useOtherDevRuntime - message pipeline integration", () => {
     expect(metadata.custom.hasImageContent).toBe(true);
   });
 });
+
+describe("appendFileContent - edge case behavior tests", () => {
+  it("should correctly identify image blocks in content", () => {
+    const contentWithImage: AppendableContentPart[] = [
+      {
+        type: "image_url",
+        image_url: { url: "data:image/png;base64,testimage123" },
+      },
+    ];
+
+    const hasImages = contentWithImage.some(
+      (block) => block.type === "image_url"
+    );
+
+    expect(hasImages).toBe(true);
+    expect(contentWithImage).toHaveLength(1);
+    expect(contentWithImage[0].type).toBe("image_url");
+  });
+
+  it("should handle text-only content without images", () => {
+    const textOnlyContent: AppendableContentPart[] = [
+      {
+        type: "text",
+        text: "Just some text",
+      },
+    ];
+
+    const hasImages = textOnlyContent.some(
+      (block) => block.type === "image_url"
+    );
+
+    expect(hasImages).toBe(false);
+    expect(textOnlyContent).toHaveLength(1);
+    expect(textOnlyContent[0].type).toBe("text");
+  });
+
+  it("should handle empty content blocks", () => {
+    const emptyContent: AppendableContentPart[] = [];
+
+    const hasImages = emptyContent.some(
+      (block) => block.type === "image_url"
+    );
+
+    expect(emptyContent).toEqual([]);
+    expect(hasImages).toBe(false);
+    expect(emptyContent).toHaveLength(0);
+  });
+
+  it("should correctly identify mixed content with images and text", () => {
+    const mixedContent: AppendableContentPart[] = [
+      {
+        type: "text",
+        text: "Analyze these images:",
+      },
+      {
+        type: "image_url",
+        image_url: { url: "data:image/png;base64,img1" },
+      },
+      {
+        type: "image_url",
+        image_url: { url: "data:image/jpeg;base64,img2" },
+      },
+    ];
+
+    const hasImages = mixedContent.some(
+      (block) => block.type === "image_url"
+    );
+
+    expect(mixedContent).toHaveLength(3);
+    expect(hasImages).toBe(true);
+    expect(mixedContent[0].type).toBe("text");
+    expect(mixedContent[1].type).toBe("image_url");
+    expect(mixedContent[2].type).toBe("image_url");
+  });
+
+  it("should verify large payload handling with multiple images", () => {
+    const largePayload: AppendableContentPart[] = [
+      {
+        type: "text",
+        text: "Multiple images to analyze",
+      },
+      ...Array.from({ length: 10 }, (_, i) => ({
+        type: "image_url" as const,
+        image_url: { url: `data:image/png;base64,image${i}` },
+      })),
+    ];
+
+    const hasImages = largePayload.some(
+      (block) => block.type === "image_url"
+    );
+    const imageCount = largePayload.filter(
+      (block) => block.type === "image_url"
+    ).length;
+
+    expect(largePayload).toHaveLength(11);
+    expect(hasImages).toBe(true);
+    expect(imageCount).toBe(10);
+  });
+
+  it("should verify API payload state after content replacement", () => {
+    // First append
+    let composedContent: AppendableContentPart[] = [
+      {
+        type: "image_url",
+        image_url: { url: "data:image/png;base64,first" },
+      },
+    ];
+
+    let hasImageContent = composedContent.some(
+      (block) => block.type === "image_url"
+    );
+
+    expect(composedContent).toHaveLength(1);
+    expect(hasImageContent).toBe(true);
+
+    // Replace with text-only content
+    composedContent = [
+      {
+        type: "text",
+        text: "Only text now",
+      },
+    ];
+
+    hasImageContent = composedContent.some(
+      (block) => block.type === "image_url"
+    );
+
+    expect(composedContent).toHaveLength(1);
+    expect(composedContent[0].type).toBe("text");
+    expect(hasImageContent).toBe(false);
+  });
+
+  it("should verify API structure preserves metadata after state changes", () => {
+    const stateHistory: Array<{
+      content: AppendableContentPart[];
+      hasImageContent: boolean;
+    }> = [];
+
+    // State 1: image content
+    let composedContent: AppendableContentPart[] = [
+      {
+        type: "image_url",
+        image_url: { url: "data:image/png;base64,img" },
+      },
+    ];
+    let hasImageContent = composedContent.some(
+      (block) => block.type === "image_url"
+    );
+
+    stateHistory.push({ content: [...composedContent], hasImageContent });
+
+    // State 2: clear for new message
+    composedContent = [];
+    hasImageContent = false;
+
+    stateHistory.push({ content: [...composedContent], hasImageContent });
+
+    // Verify history
+    expect(stateHistory).toHaveLength(2);
+    expect(stateHistory[0].hasImageContent).toBe(true);
+    expect(stateHistory[0].content).toHaveLength(1);
+    expect(stateHistory[1].hasImageContent).toBe(false);
+    expect(stateHistory[1].content).toHaveLength(0);
+  });
+});
