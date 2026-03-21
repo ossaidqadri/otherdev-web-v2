@@ -385,7 +385,7 @@ export function ChatWidget() {
             "md:h-12 md:w-12",
             "flex items-center justify-center",
             "rounded-full shadow-lg",
-            "bg-card",
+            "bg-background",
             "hover:opacity-80 hover:scale-110",
             "transition-all focus:outline-none",
           )}
@@ -408,7 +408,7 @@ export function ChatWidget() {
           className={cn(
             "fixed flex flex-col",
             "shadow-2xl border overflow-hidden",
-            "p-0 gap-0 bg-card",
+            "p-0 gap-0 bg-background",
             "animate-[slideInFromBottom_0.5s_ease-out_forwards]",
             "inset-0 rounded-none",
             "sm:inset-4 sm:rounded-2xl sm:max-w-[90vw] sm:max-h-[calc(100vh-2rem)]",
@@ -435,7 +435,7 @@ export function ChatWidget() {
             )}
           >
             <div className="flex items-center gap-2">
-              <h3 className="font-normal text-base md:text-lg text-card-foreground">
+              <h3 className="font-normal text-base md:text-lg text-foreground">
                 OtherDev AI
               </h3>
             </div>
@@ -453,7 +453,7 @@ export function ChatWidget() {
               <div className="flex-1 flex items-center justify-center overflow-y-auto p-4">
                 <div className="w-full max-w-2xl space-y-6">
                   <div className="text-center space-y-3">
-                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-card-foreground">
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">
                       How can I help you?
                     </h2>
                     <p className="text-muted-foreground text-sm">
@@ -518,7 +518,7 @@ export function ChatWidget() {
                                     </CollapsibleContent>
                                   </Collapsible>
                                 )}
-                                <div className="text-card-foreground text-sm leading-relaxed prose dark:prose-invert prose-sm max-w-none">
+                                <div className="text-foreground text-sm leading-relaxed prose dark:prose-invert prose-sm max-w-none">
                                   <MarkdownRenderer>
                                     {cleanSuggestionMarkers(message.content)}
                                   </MarkdownRenderer>
