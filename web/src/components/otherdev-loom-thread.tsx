@@ -48,7 +48,6 @@ import { cn } from "@/lib/utils";
 import { FileAttachmentButton } from "@/components/file-attachment-button";
 import { VoiceRecorderButton } from "@/components/voice-recorder-button";
 import { FilePreview } from "@/components/file-preview";
-import { TranscriptPreview } from "@/components/transcript-preview";
 import {
   encodeImageToBase64,
   extractTextFromFile,
@@ -261,7 +260,6 @@ export function OtherDevLoomThread() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [inputValue, setInputValue] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
-  const [transcript, setTranscript] = useState("");
   const [isProcessingFiles, setIsProcessingFiles] = useState(false);
   const [fileError, setFileError] = useState("");
 
@@ -317,31 +315,12 @@ export function OtherDevLoomThread() {
   };
 
   const handleTranscriptReceived = (text: string) => {
-    setTranscript(text);
-  };
-
-  const handleTranscriptAccept = async () => {
-    if (!transcript) return;
-
-    try {
-      const contentBlocks: ContentBlock[] = [
-        {
-          type: "text",
-          text: `[Voice Message] ${transcript}`,
-        },
-      ];
-
-      appendFileContent(contentBlocks);
-      setTranscript("");
-      setFileError("");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to send voice message";
-      setFileError(message);
+    // Put transcription directly into the input field
+    if (inputRef.current) {
+      setNativeInputValue(inputRef.current, text);
+      setInputValue(text);
+      inputRef.current.focus();
     }
-  };
-
-  const handleTranscriptReject = () => {
-    setTranscript("");
   };
 
   const handleRecorderError = (error: string) => {
@@ -531,15 +510,6 @@ export function OtherDevLoomThread() {
                 </Button>
               </div>
             </div>
-          )}
-
-          {transcript && (
-            <TranscriptPreview
-              transcript={transcript}
-              onAccept={handleTranscriptAccept}
-              onReject={handleTranscriptReject}
-              isProcessing={isProcessingFiles}
-            />
           )}
         </div>
 

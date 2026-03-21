@@ -55,8 +55,51 @@ export function VoiceRecorderButton({
         throw new Error("Transcription failed")
       }
 
-      const { transcript } = await response.json()
-      onTranscript(transcript)
+      // Handle streaming transcription
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        throw new Error("Response body is not readable")
+      }
+
+      let fullTranscript = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split("\n")
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue
+
+          const data = line.slice(6)
+          if (data === "[DONE]") {
+            // Transcription complete, call callback with final transcript
+            if (fullTranscript) {
+              onTranscript(fullTranscript)
+            }
+            continue
+          }
+
+          try {
+            const parsed = JSON.parse(data)
+
+            if (parsed.type === "transcript-chunk") {
+              fullTranscript += parsed.content
+              // Real-time update as chunks arrive
+              onTranscript(fullTranscript)
+            } else if (parsed.type === "transcript-complete") {
+              fullTranscript = parsed.content
+              onTranscript(fullTranscript)
+            }
+          } catch (parseError) {
+            console.error("Error parsing transcription chunk:", parseError)
+          }
+        }
+      }
 
       // Stop microphone stream
       recorder.mediaRecorder.stream.getTracks().forEach(track => track.stop())
