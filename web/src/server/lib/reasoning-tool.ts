@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const ADD_REASONING_STEP_TOOL_NAME = "add_reasoning_step";
+
 export const reasoningStepSchema = z.object({
   phase: z
     .enum([
@@ -22,7 +24,7 @@ export type ReasoningStepArgs = z.infer<typeof reasoningStepSchema>;
 export const reasoningStepTool = {
   type: "function" as const,
   function: {
-    name: "add_reasoning_step",
+    name: ADD_REASONING_STEP_TOOL_NAME,
     description:
       "Add a structured reasoning step to help explain your thinking process. Use this to break down your response into three phases: first Analyzing the request (understanding what's being asked), then Considering options (exploring different approaches), and finally Selecting the approach (deciding on the best solution).",
     parameters: {

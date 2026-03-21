@@ -25,14 +25,3 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   }
 }
 
-export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
-  const embeddings: number[][] = [];
-
-  for (const text of texts) {
-    const embedding = await generateEmbedding(text);
-    embeddings.push(embedding);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
-
-  return embeddings;
-}

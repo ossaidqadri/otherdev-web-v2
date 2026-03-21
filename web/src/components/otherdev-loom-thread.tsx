@@ -42,11 +42,28 @@ import {
   PromptInputTextarea,
 } from "@/components/ui/prompt-input";
 import { useArtifact, useRuntimeContext } from "@/app/loom/page";
+import { CREATE_ARTIFACT_TOOL_NAME } from "@/server/lib/artifact-tool";
 import { SUGGESTED_PROMPTS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 function cleanSuggestionMarkers(content: string): string {
   return content.replace(/\s*SUGGESTION:[\s\S]*$/i, "").trim();
+}
+
+function ReasoningCollapsible({ reasoning }: { reasoning: string }) {
+  return (
+    <Collapsible defaultOpen={false}>
+      <CollapsibleTrigger className="flex items-center gap-1 font-sans text-xs text-muted-foreground transition-colors hover:text-foreground group">
+        <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]:rotate-90" />
+        <span>View thinking process</span>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-2">
+        <div className="prose prose-sm max-w-full break-words rounded-xl border border-border bg-muted/50 p-3 font-sans text-xs leading-relaxed text-muted-foreground dark:prose-invert sm:p-4 sm:text-sm">
+          <MarkdownRenderer>{reasoning}</MarkdownRenderer>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
 }
 
 function SuggestionButton({
@@ -130,19 +147,7 @@ function AssistantMessage() {
             className="h-7 w-7 flex-shrink-0 sm:h-8 sm:w-8"
           />
           <div className="flex-1 space-y-3 min-w-0">
-            {reasoning && (
-              <Collapsible defaultOpen={false}>
-                <CollapsibleTrigger className="flex items-center gap-1 font-sans text-xs text-muted-foreground transition-colors hover:text-foreground group">
-                  <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]:rotate-90" />
-                  <span>View thinking process</span>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-2">
-                  <div className="prose prose-sm max-w-full break-words rounded-xl border border-border bg-muted/50 p-3 font-sans text-xs leading-relaxed text-muted-foreground dark:prose-invert sm:p-4 sm:text-sm">
-                    <MarkdownRenderer>{reasoning}</MarkdownRenderer>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            )}
+            {reasoning && <ReasoningCollapsible reasoning={reasoning} />}
             {cleanedText && (
               <div ref={contentRef}>
                 <MessageContent
@@ -153,7 +158,7 @@ function AssistantMessage() {
                 </MessageContent>
               </div>
             )}
-            {toolCallPart.toolName === "create_artifact" && (
+            {toolCallPart.toolName === CREATE_ARTIFACT_TOOL_NAME && (
               <Card
                 onClick={() => setActiveArtifact(toolCallPart)}
                 className="w-full max-w-md cursor-pointer border-border/60 bg-card/50 transition-all duration-200 hover:border-foreground/20 hover:bg-card/80 hover:shadow-sm active:scale-[0.99]"
@@ -200,19 +205,7 @@ function AssistantMessage() {
           <div className="h-7 w-7 flex-shrink-0 sm:h-8 sm:w-8" />
         </AssistantIf>
         <div className="flex-1 space-y-2 min-w-0">
-          {reasoning && (
-            <Collapsible defaultOpen={false}>
-              <CollapsibleTrigger className="flex items-center gap-1 font-sans text-xs text-muted-foreground transition-colors hover:text-foreground group">
-                <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]:rotate-90" />
-                <span>View thinking process</span>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2">
-                <div className="prose prose-sm max-w-full break-words rounded-xl border border-border bg-muted/50 p-3 font-sans text-xs leading-relaxed text-muted-foreground dark:prose-invert sm:p-4 sm:text-sm">
-                  <MarkdownRenderer>{reasoning}</MarkdownRenderer>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
+          {reasoning && <ReasoningCollapsible reasoning={reasoning} />}
           {cleanedText && (
             <div ref={contentRef}>
               <MessageContent
@@ -415,10 +408,6 @@ export function OtherDevLoomThread() {
             <button
               type="button"
               onClick={applySuggestion}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                applySuggestion();
-              }}
               className="absolute left-3 top-2.5 font-sans text-sm text-muted-foreground hover:opacity-80 transition-opacity sm:left-4 sm:top-3 sm:text-base md:hidden"
             >
               {suggestion}

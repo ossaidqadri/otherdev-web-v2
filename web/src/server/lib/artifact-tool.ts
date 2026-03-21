@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const CREATE_ARTIFACT_TOOL_NAME = "create_artifact";
+
 export const createArtifactSchema = z.object({
   title: z
     .string()
@@ -27,7 +29,7 @@ export type CreateArtifactArgs = z.infer<typeof createArtifactSchema>;
 export const createArtifactTool = {
   type: "function" as const,
   function: {
-    name: "create_artifact",
+    name: CREATE_ARTIFACT_TOOL_NAME,
     description:
       "Create an interactive web artifact that will be displayed in a live preview panel. Supports vanilla HTML/CSS/JS or modern frameworks (React, Vue, Tailwind CSS) via CDN. Use this when the user asks to create, build, make, or generate interactive content like websites, apps, games, visualizations, calculators, forms, dashboards, or any web-based UI. The artifact should be complete, self-contained, and visually polished.",
     parameters: {

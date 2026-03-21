@@ -50,13 +50,168 @@ function deserializeMessages(data: string): Message[] {
   }));
 }
 
+function setTextareaValue(textarea: HTMLTextAreaElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(
+    HTMLTextAreaElement.prototype,
+    "value",
+  )?.set;
+  setter?.call(textarea, value);
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+async function streamChat(
+  apiMessages: Array<{ role: string; content: string }>,
+  assistantMessageId: string,
+  threadId: string | undefined,
+  {
+    setMessages,
+    setSuggestion,
+    setThreadId,
+    setIsGenerating,
+  }: {
+    setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
+    setSuggestion: React.Dispatch<React.SetStateAction<string>>;
+    setThreadId: React.Dispatch<React.SetStateAction<string | undefined>>;
+    setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>;
+  },
+): Promise<void> {
+  let messageAdded = false;
+
+  try {
+    const response = await fetch("/api/chat/stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: apiMessages, threadId }),
+    });
+
+    const newThreadId = response.headers.get("X-Thread-Id");
+    if (newThreadId && !threadId) {
+      setThreadId(newThreadId);
+    }
+
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
+
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+
+    if (!reader) {
+      throw new Error("Response body is not readable");
+    }
+
+    let accumulatedContent = "";
+    let accumulatedReasoning = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split("\n");
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const data = line.slice(6);
+
+          if (data === "[DONE]") {
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(data);
+
+            if (parsed.type === "suggestion" && parsed.content) {
+              setSuggestion(parsed.content);
+            }
+
+            if (parsed.type === "reasoning" && parsed.content) {
+              accumulatedReasoning += parsed.content;
+
+              if (!messageAdded) {
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: assistantMessageId,
+                    role: "assistant",
+                    content: accumulatedContent,
+                    reasoning: accumulatedReasoning,
+                    createdAt: new Date(),
+                  },
+                ]);
+                messageAdded = true;
+              } else {
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === assistantMessageId
+                      ? { ...msg, reasoning: accumulatedReasoning }
+                      : msg,
+                  ),
+                );
+              }
+            }
+
+            if (parsed.type === "content" && parsed.content) {
+              accumulatedContent += parsed.content;
+
+              if (!messageAdded) {
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: assistantMessageId,
+                    role: "assistant",
+                    content: accumulatedContent,
+                    reasoning: accumulatedReasoning,
+                    createdAt: new Date(),
+                  },
+                ]);
+                messageAdded = true;
+              } else {
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === assistantMessageId
+                      ? { ...msg, content: accumulatedContent }
+                      : msg,
+                  ),
+                );
+              }
+            }
+          } catch (parseError) {
+            console.error("Error parsing SSE data:", parseError);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Chat error:", error);
+
+    if (!messageAdded) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: assistantMessageId,
+          role: "assistant",
+          content: "Failed to get response. Please try again.",
+          createdAt: new Date(),
+        },
+      ]);
+    } else {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId
+            ? { ...msg, content: "Failed to get response. Please try again." }
+            : msg,
+        ),
+      );
+    }
+  } finally {
+    setIsGenerating(false);
+  }
+}
+
 export function ChatWidget() {
   const pathname = usePathname();
-
-  if (pathname?.startsWith("/loom")) {
-    return null;
-  }
-
   const [isOpen, setIsOpen] = React.useState(false);
   const { messages, setMessages } = useLocalStorageMessages<Message>({
     key: CHAT_WIDGET_STORAGE_KEY,
@@ -72,21 +227,10 @@ export function ChatWidget() {
 
   const applySuggestion = React.useCallback(() => {
     if (textareaRef.current) {
-      const textarea = textareaRef.current;
-      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-        HTMLTextAreaElement.prototype,
-        "value",
-      )?.set;
-
-      if (nativeInputValueSetter) {
-        nativeInputValueSetter.call(textarea, suggestion);
-        const inputEvent = new Event("input", { bubbles: true });
-        textarea.dispatchEvent(inputEvent);
-      }
-
+      setTextareaValue(textareaRef.current, suggestion);
       setInput(suggestion);
       setSuggestion("");
-      textarea.focus();
+      textareaRef.current.focus();
     }
   }, [suggestion]);
 
@@ -111,12 +255,9 @@ export function ChatWidget() {
   useScrollLock(isOpen);
 
   React.useEffect(() => {
-    if (isOpen && textareaRef.current) {
-      textareaRef.current.focus();
+    if (isOpen) {
+      textareaRef.current?.focus();
     }
-  }, [isOpen]);
-
-  React.useEffect(() => {
     if (cardRef.current) {
       cardRef.current.scrollTop = 0;
     }
@@ -131,19 +272,7 @@ export function ChatWidget() {
         !textareaRef.current.value
       ) {
         e.preventDefault();
-
-        const textarea = textareaRef.current;
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-          HTMLTextAreaElement.prototype,
-          "value",
-        )?.set;
-
-        if (nativeInputValueSetter) {
-          nativeInputValueSetter.call(textarea, suggestion);
-          const inputEvent = new Event("input", { bubbles: true });
-          textarea.dispatchEvent(inputEvent);
-        }
-
+        setTextareaValue(textareaRef.current, suggestion);
         setInput(suggestion);
         setSuggestion("");
       }
@@ -166,6 +295,10 @@ export function ChatWidget() {
     }
   }, [suggestion]);
 
+  if (pathname?.startsWith("/loom")) {
+    return null;
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -187,142 +320,18 @@ export function ChatWidget() {
     }
 
     setIsGenerating(true);
-
     const assistantMessageId = `assistant-${Date.now()}`;
-    let messageAdded = false;
+    const apiMessages = messages.concat(userMessage).map((msg) => ({
+      role: msg.role,
+      content: msg.content,
+    }));
 
-    try {
-      const apiMessages = messages.concat(userMessage).map((msg) => ({
-        role: msg.role,
-        content: msg.content,
-      }));
-
-      const response = await fetch("/api/chat/stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: apiMessages, threadId }),
-      });
-
-      const newThreadId = response.headers.get("X-Thread-Id");
-      if (newThreadId && !threadId) {
-        setThreadId(newThreadId);
-      }
-
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (!reader) {
-        throw new Error("Response body is not readable");
-      }
-
-      let accumulatedContent = "";
-      let accumulatedReasoning = "";
-      let currentSuggestion = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const data = line.slice(6);
-
-            if (data === "[DONE]") {
-              break;
-            }
-
-            try {
-              const parsed = JSON.parse(data);
-
-              if (parsed.type === "suggestion" && parsed.content) {
-                currentSuggestion = parsed.content;
-                setSuggestion(currentSuggestion);
-              }
-
-              if (parsed.type === "reasoning" && parsed.content) {
-                accumulatedReasoning += parsed.content;
-
-                if (!messageAdded) {
-                  const assistantMessage: Message = {
-                    id: assistantMessageId,
-                    role: "assistant",
-                    content: accumulatedContent,
-                    reasoning: accumulatedReasoning,
-                    createdAt: new Date(),
-                  };
-                  setMessages((prev) => [...prev, assistantMessage]);
-                  messageAdded = true;
-                } else {
-                  setMessages((prev) =>
-                    prev.map((msg) =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, reasoning: accumulatedReasoning }
-                        : msg,
-                    ),
-                  );
-                }
-              }
-
-              if (parsed.type === "content" && parsed.content) {
-                accumulatedContent += parsed.content;
-
-                if (!messageAdded) {
-                  const assistantMessage: Message = {
-                    id: assistantMessageId,
-                    role: "assistant",
-                    content: accumulatedContent,
-                    reasoning: accumulatedReasoning,
-                    createdAt: new Date(),
-                  };
-                  setMessages((prev) => [...prev, assistantMessage]);
-                  messageAdded = true;
-                } else {
-                  setMessages((prev) =>
-                    prev.map((msg) =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, content: accumulatedContent }
-                        : msg,
-                    ),
-                  );
-                }
-              }
-            } catch (parseError) {
-              console.error("Error parsing SSE data:", parseError);
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Chat error:", error);
-
-      if (!messageAdded) {
-        const errorMessage: Message = {
-          id: assistantMessageId,
-          role: "assistant",
-          content: "Failed to get response. Please try again.",
-          createdAt: new Date(),
-        };
-        setMessages((prev) => [...prev, errorMessage]);
-      } else {
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantMessageId
-              ? { ...msg, content: "Failed to get response. Please try again." }
-              : msg,
-          ),
-        );
-      }
-    } finally {
-      setIsGenerating(false);
-    }
+    await streamChat(apiMessages, assistantMessageId, threadId, {
+      setMessages,
+      setSuggestion,
+      setThreadId,
+      setIsGenerating,
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -347,145 +356,17 @@ export function ChatWidget() {
     setIsGenerating(true);
 
     const assistantMessageId = `assistant-${Date.now()}`;
-    let messageAdded = false;
+    const apiMessages = messages.concat(userMessage).map((msg) => ({
+      role: msg.role,
+      content: msg.content,
+    }));
 
-    (async () => {
-      try {
-        const apiMessages = messages.concat(userMessage).map((msg) => ({
-          role: msg.role,
-          content: msg.content,
-        }));
-
-        const response = await fetch("/api/chat/stream", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: apiMessages, threadId }),
-        });
-
-        const newThreadId = response.headers.get("X-Thread-Id");
-        if (newThreadId && !threadId) {
-          setThreadId(newThreadId);
-        }
-
-        if (!response.ok) {
-          throw new Error(`Server error: ${response.status}`);
-        }
-
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
-
-        if (!reader) {
-          throw new Error("Response body is not readable");
-        }
-
-        let accumulatedContent = "";
-        let accumulatedReasoning = "";
-        let currentSuggestion = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const data = line.slice(6);
-
-              if (data === "[DONE]") {
-                break;
-              }
-
-              try {
-                const parsed = JSON.parse(data);
-
-                if (parsed.type === "suggestion" && parsed.content) {
-                  currentSuggestion = parsed.content;
-                  setSuggestion(currentSuggestion);
-                }
-
-                if (parsed.type === "reasoning" && parsed.content) {
-                  accumulatedReasoning += parsed.content;
-
-                  if (!messageAdded) {
-                    const assistantMessage: Message = {
-                      id: assistantMessageId,
-                      role: "assistant",
-                      content: accumulatedContent,
-                      reasoning: accumulatedReasoning,
-                      createdAt: new Date(),
-                    };
-                    setMessages((prev) => [...prev, assistantMessage]);
-                    messageAdded = true;
-                  } else {
-                    setMessages((prev) =>
-                      prev.map((msg) =>
-                        msg.id === assistantMessageId
-                          ? { ...msg, reasoning: accumulatedReasoning }
-                          : msg,
-                      ),
-                    );
-                  }
-                }
-
-                if (parsed.type === "content" && parsed.content) {
-                  accumulatedContent += parsed.content;
-
-                  if (!messageAdded) {
-                    const assistantMessage: Message = {
-                      id: assistantMessageId,
-                      role: "assistant",
-                      content: accumulatedContent,
-                      reasoning: accumulatedReasoning,
-                      createdAt: new Date(),
-                    };
-                    setMessages((prev) => [...prev, assistantMessage]);
-                    messageAdded = true;
-                  } else {
-                    setMessages((prev) =>
-                      prev.map((msg) =>
-                        msg.id === assistantMessageId
-                          ? { ...msg, content: accumulatedContent }
-                          : msg,
-                      ),
-                    );
-                  }
-                }
-              } catch (parseError) {
-                console.error("Error parsing SSE data:", parseError);
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Chat error:", error);
-
-        if (!messageAdded) {
-          const errorMessage: Message = {
-            id: assistantMessageId,
-            role: "assistant",
-            content: "Failed to get response. Please try again.",
-            createdAt: new Date(),
-          };
-          setMessages((prev) => [...prev, errorMessage]);
-        } else {
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === assistantMessageId
-                ? {
-                    ...msg,
-                    content: "Failed to get response. Please try again.",
-                  }
-                : msg,
-            ),
-          );
-        }
-      } finally {
-        setIsGenerating(false);
-      }
-    })();
+    streamChat(apiMessages, assistantMessageId, threadId, {
+      setMessages,
+      setSuggestion,
+      setThreadId,
+      setIsGenerating,
+    });
   };
 
   const isEmpty = messages.length === 0;
@@ -727,10 +608,6 @@ export function ChatWidget() {
                       <button
                         type="button"
                         onClick={applySuggestion}
-                        onTouchEnd={(e) => {
-                          e.preventDefault();
-                          applySuggestion();
-                        }}
                         className="absolute left-3 top-3 cursor-pointer text-base text-muted-foreground md:hidden"
                         style={{ pointerEvents: "auto" }}
                       >

@@ -1,7 +1,7 @@
 interface PromptSuggestionsProps {
   label: string;
   append: (message: { role: "user"; content: string }) => void;
-  suggestions: string[] | { display: string; prompt: string }[];
+  suggestions: string[] | { label: string; prompt: string }[];
 }
 
 export function PromptSuggestions({
@@ -15,7 +15,7 @@ export function PromptSuggestions({
       <div className="flex flex-col gap-3 text-sm">
         {suggestions.map((suggestion, index) => {
           const isObject = typeof suggestion === "object";
-          const display = isObject ? suggestion.display : suggestion;
+          const display = isObject ? suggestion.label : suggestion;
           const content = isObject ? suggestion.prompt : suggestion;
 
           return (
