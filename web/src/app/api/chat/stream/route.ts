@@ -9,7 +9,13 @@ import {
 } from "@/server/lib/rate-limit";
 import { createArtifactTool } from "@/server/lib/artifact-tool";
 import { stripMarkdown } from "@/lib/utils";
-import { selectModel, formatMessagesForGroq, validateImageContent, type Message } from "./helpers";
+import {
+  selectModel,
+  formatMessagesForGroq,
+  validateImageContent,
+  boundMessagesForGroq,
+  type Message,
+} from "./helpers";
 
 // Zod schemas for validating content blocks (matching shared ContentBlock types)
 const TextBlockSchema = z.object({
@@ -238,24 +244,23 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const { messages, hasImageContent } = validation.data;
-    const lastUserMessage = messages.filter((m) => m.role === "user").pop();
+    const typedMessages: Message[] = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const boundedMessages = boundMessagesForGroq(typedMessages);
+    const lastUserMessage = boundedMessages.filter((m) => m.role === "user").pop();
 
     if (!lastUserMessage) {
       return createJsonResponse({ error: "No user message found" }, 400);
     }
 
-    const typedMessages: Message[] = messages.map(m => ({
-      role: m.role,
-      content: m.content,
-    }));
-
-    validateImageContent(typedMessages, hasImageContent);
-
     const lastUserContent = typeof lastUserMessage.content === "string"
       ? lastUserMessage.content
-      : lastUserMessage.content.map(block =>
-          block.type === "text" ? block.text : "[Image content]"
-        ).join(" ");
+      : lastUserMessage.content
+        .map((block) => (block.type === "text" ? block.text : "[Image content]"))
+        .join(" ");
 
     const sanitizedQuery = sanitizeInput(lastUserContent);
     const normalizedQuery = sanitizedQuery.replace(/otherdev/gi, "Other Dev");
@@ -275,9 +280,16 @@ export async function POST(request: Request): Promise<Response> {
 
     const systemPrompt = SYSTEM_PROMPT_TEMPLATE.replace("{context}", context);
 
-    const selectedModel = selectModel(hasImageContent);
+    const boundedHasImages = boundedMessages.some((message) =>
+      Array.isArray(message.content) &&
+      message.content.some((block) => block.type === "image_url")
+    );
 
-    const formattedMessages = formatMessagesForGroq(typedMessages).map((m) => ({
+    validateImageContent(boundedMessages, hasImageContent ?? boundedHasImages);
+
+    const selectedModel = selectModel(hasImageContent ?? boundedHasImages);
+
+    const formattedMessages = formatMessagesForGroq(boundedMessages).map((m) => ({
       role: m.role as "user" | "assistant",
       content: typeof m.content === "string"
         ? sanitizeInput(m.content)
