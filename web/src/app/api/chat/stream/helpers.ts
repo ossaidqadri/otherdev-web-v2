@@ -59,7 +59,7 @@ export function validateImageContent(
   if (hasImageContent === false && hasImages) {
     console.warn(
       "WARNING: hasImageContent flag is false but images found in message content. " +
-      "Consider setting hasImageContent to true for better model selection.",
+        "Consider setting hasImageContent to true for better model selection.",
     );
   }
 }

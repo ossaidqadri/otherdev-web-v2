@@ -290,7 +290,7 @@ export async function POST(request: Request): Promise<Response> {
 
     validateImageContent(
       boundedMessages,
-      hasImageContent !== undefined ? hasImageContent : boundedHasImages,
+      effectiveHasImageContent,
     );
 
     const selectedModel = selectModel(effectiveHasImageContent);
