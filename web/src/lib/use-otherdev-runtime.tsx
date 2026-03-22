@@ -82,26 +82,31 @@ export function useOtherDevRuntime() {
   });
   const [isRunning, setIsRunning] = useState(false);
   const [suggestion, setSuggestion] = useState("");
-  const [composedContent, setComposedContent] = useState<AppendableContentPart[]>([]);
+  const [composedContent, setComposedContent] = useState<
+    AppendableContentPart[]
+  >([]);
   const [hasImageContent, setHasImageContent] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const onNew = useCallback(
     async (message: AppendMessage) => {
       const textContent = message.content.find((part) => part.type === "text");
-      if (!textContent || textContent.type !== "text") return;
+      const hasImages = composedContent.some((block) => block.type === "image_url");
+
+      // Store only text in the thread message — assistant-ui can't render image_url parts
+      // Images are kept in metadata for API serialization
+      const imageUrls = composedContent
+        .filter((b) => b.type === "image_url")
+        .map((b) => (b as { type: "image_url"; image_url: { url: string } }).image_url);
 
       const userMessage: ThreadMessage = {
         id: `user-${Date.now()}`,
         role: "user",
-        content: [
-          textContent,
-          ...composedContent,
-        ],
+        content: textContent ? [textContent] : [],
         createdAt: new Date(),
         attachments: [],
         metadata: {
-          custom: { hasImageContent },
+          custom: { hasImageContent: hasImages, images: imageUrls },
         },
       };
 
@@ -115,15 +120,30 @@ export function useOtherDevRuntime() {
       let messageAdded = false;
 
       try {
-        const apiMessages = messages.concat(userMessage).map((msg) => ({
-          role: msg.role,
-          content: msg.content.find((c) => c.type === "text")?.text ?? "",
-        }));
+        const apiMessages = messages.concat(userMessage).map((msg) => {
+          const text = msg.content.find((c) => c.type === "text");
+          const storedImages = (msg.metadata?.custom as { images?: { url: string }[] } | undefined)?.images ?? [];
+
+          if (storedImages.length > 0) {
+            return {
+              role: msg.role,
+              content: [
+                ...storedImages.map((img) => ({ type: "image_url", image_url: img })),
+                { type: "text", text: text && text.type === "text" ? text.text : "" },
+              ],
+            };
+          }
+
+          return {
+            role: msg.role,
+            content: text && text.type === "text" ? text.text : "",
+          };
+        });
 
         const response = await fetch("/api/chat/stream", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: apiMessages, hasImageContent }),
+          body: JSON.stringify({ messages: apiMessages, hasImageContent: hasImages }),
           signal: abortControllerRef.current.signal,
         });
 
@@ -331,14 +351,14 @@ export function useOtherDevRuntime() {
     (contentBlocks: AppendableContentPart[]) => {
       // Check if any blocks contain image content
       const hasImages = contentBlocks.some(
-        (block) => block.type === "image_url"
+        (block) => block.type === "image_url",
       );
 
       // Update composed content and flags
       setComposedContent(contentBlocks);
       setHasImageContent(hasImages);
     },
-    []
+    [],
   );
 
   const onCancel = useCallback(async () => {

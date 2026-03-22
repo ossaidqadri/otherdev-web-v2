@@ -1,35 +1,38 @@
 "use client";
 
+import type { ToolCallMessagePart } from "@assistant-ui/react";
 import {
-  ThreadPrimitive,
-  MessagePrimitive,
-  useAssistantApi,
   AssistantIf,
+  MessagePrimitive,
+  ThreadPrimitive,
+  useAssistantApi,
   useMessage,
 } from "@assistant-ui/react";
-import type { ToolCallMessagePart } from "@assistant-ui/react";
-import { ArrowUp, FileCode2, ChevronRight } from "lucide-react";
+import { ArrowUp, ChevronRight, FileCode2 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { useArtifact, useRuntimeContext } from "@/app/loom/page";
+import { FileAttachmentButton } from "@/components/file-attachment-button";
+import { FilePreview } from "@/components/file-preview";
 import { Button } from "@/components/ui/button";
-import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
-import { CopyButton } from "@/components/ui/copy-button";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  ChatContainerContent,
+  ChatContainerRoot,
+  ChatContainerScrollAnchor,
+} from "@/components/ui/chat-container";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import {
-  ChatContainerRoot,
-  ChatContainerContent,
-  ChatContainerScrollAnchor,
-} from "@/components/ui/chat-container";
+import { CopyButton } from "@/components/ui/copy-button";
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import {
   Message,
   MessageAvatar,
@@ -41,17 +44,11 @@ import {
   PromptInputActions,
   PromptInputTextarea,
 } from "@/components/ui/prompt-input";
-import { useArtifact, useRuntimeContext } from "@/app/loom/page";
-import { CREATE_ARTIFACT_TOOL_NAME } from "@/server/lib/artifact-tool";
-import { SUGGESTED_PROMPTS } from "@/lib/constants";
-import { cn } from "@/lib/utils";
-import { FileAttachmentButton } from "@/components/file-attachment-button";
 import { VoiceRecorderButton } from "@/components/voice-recorder-button";
-import { FilePreview } from "@/components/file-preview";
-import {
-  encodeImageToBase64,
-  extractTextFromFile,
-} from "@/lib/file-processor";
+import { SUGGESTED_PROMPTS } from "@/lib/constants";
+import { encodeImageToBase64, extractTextFromFile } from "@/lib/file-processor";
+import { cn } from "@/lib/utils";
+import { CREATE_ARTIFACT_TOOL_NAME } from "@/server/lib/artifact-tool";
 
 type ContentBlock =
   | { type: "image_url"; image_url: { url: string } }
@@ -105,12 +102,31 @@ function SuggestionButton({
 }
 
 function UserMessage() {
+  const message = useMessage();
+  const images = (message.metadata?.custom as { images?: { url: string }[] } | undefined)?.images ?? [];
+
   return (
     <div className="flex justify-end">
       <Message className="max-w-[95%] gap-2 sm:max-w-[85%] sm:gap-3 md:max-w-[80%]">
-        <MessageContent className="rounded-2xl bg-accent px-3 py-2 text-sm text-accent-foreground sm:px-4 sm:py-3 sm:text-base">
-          <MessagePrimitive.Content />
-        </MessageContent>
+        <div className="flex flex-col gap-2">
+          {images.length > 0 && (
+            <div className="flex flex-wrap gap-2 justify-end">
+              {images.map((img, i) => (
+                <img
+                  key={i}
+                  src={img.url}
+                  alt="Attached image"
+                  className="max-h-48 max-w-48 rounded-xl object-cover"
+                />
+              ))}
+            </div>
+          )}
+          {message.content.some((p) => p.type === "text") && (
+            <MessageContent className="rounded-2xl bg-accent px-3 py-2 text-sm text-accent-foreground sm:px-4 sm:py-3 sm:text-base">
+              <MessagePrimitive.Content />
+            </MessageContent>
+          )}
+        </div>
         <MessageAvatar
           src="/loom-avatar.svg"
           alt="User"
@@ -242,20 +258,9 @@ function AssistantMessage() {
   );
 }
 
-function setNativeInputValue(input: HTMLTextAreaElement, value: string): void {
-  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value",
-  )?.set;
-
-  if (nativeInputValueSetter) {
-    nativeInputValueSetter.call(input, value);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  }
-}
-
 export function OtherDevLoomThread() {
-  const { suggestion, setSuggestion, appendFileContent } = useRuntimeContext();
+  const { suggestion, setSuggestion, appendFileContent, composedContent } =
+    useRuntimeContext();
   const api = useAssistantApi();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [inputValue, setInputValue] = useState("");
@@ -263,64 +268,51 @@ export function OtherDevLoomThread() {
   const [isProcessingFiles, setIsProcessingFiles] = useState(false);
   const [fileError, setFileError] = useState("");
 
-  const handleFilesSelected = async (files: File[]) => {
+  const processAndAttachFiles = async (files: File[]) => {
+    if (files.length === 0) {
+      appendFileContent([]);
+      return;
+    }
+
     try {
       setFileError("");
       setIsProcessingFiles(true);
-      setAttachedFiles(files);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to process files";
-      setFileError(message);
-      setAttachedFiles([]);
-    } finally {
-      setIsProcessingFiles(false);
-    }
-  };
-
-  const handleRemoveFile = (index: number) => {
-    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleFilesSubmit = async () => {
-    if (attachedFiles.length === 0) return;
-
-    try {
-      setIsProcessingFiles(true);
       const contentBlocks: ContentBlock[] = [];
 
-      for (const file of attachedFiles) {
+      for (const file of files) {
         if (file.type.startsWith("image/")) {
           const dataUri = await encodeImageToBase64(file);
-          contentBlocks.push({
-            type: "image_url",
-            image_url: { url: dataUri },
-          });
+          contentBlocks.push({ type: "image_url", image_url: { url: dataUri } });
         } else {
           const text = await extractTextFromFile(file);
-          contentBlocks.push({
-            type: "text",
-            text: `[File: ${file.name}]\n${text}`,
-          });
+          contentBlocks.push({ type: "text", text: `[File: ${file.name}]\n${text}` });
         }
       }
 
       appendFileContent(contentBlocks);
-      setAttachedFiles([]);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to process files";
+      const message =
+        error instanceof Error ? error.message : "Failed to process files";
       setFileError(message);
     } finally {
       setIsProcessingFiles(false);
     }
   };
 
+  const handleFilesSelected = async (files: File[]) => {
+    setAttachedFiles(files);
+    await processAndAttachFiles(files);
+  };
+
+  const handleRemoveFile = async (index: number) => {
+    const remaining = attachedFiles.filter((_, i) => i !== index);
+    setAttachedFiles(remaining);
+    await processAndAttachFiles(remaining);
+  };
+
   const handleTranscriptReceived = (text: string) => {
-    // Put transcription directly into the input field
-    if (inputRef.current) {
-      setNativeInputValue(inputRef.current, text);
-      setInputValue(text);
-      inputRef.current.focus();
-    }
+    setInputValue(text);
+    inputRef.current?.focus();
   };
 
   const handleRecorderError = (error: string) => {
@@ -328,27 +320,28 @@ export function OtherDevLoomThread() {
   };
 
   const handleSubmit = () => {
-    const value = inputRef.current?.value?.trim();
-    if (!value) return;
+    const value = inputValue.trim();
+    if (!value && composedContent.length === 0) return;
 
-    api
-      .thread()
-      .append({ role: "user", content: [{ type: "text", text: value }] });
+    // Only pass text through append() — images are already in composedContent
+    // on the runtime and will be merged in onNew
+    api.thread().append({
+      role: "user",
+      content: [{ type: "text", text: value || "" }],
+    });
 
     setSuggestion("");
-
-    if (inputRef.current) {
-      setNativeInputValue(inputRef.current, "");
-      setInputValue("");
-    }
+    setInputValue("");
+    setAttachedFiles([]);
+    // composedContent is cleared by onNew after use
   };
 
   const applySuggestion = () => {
-    if (!inputRef.current || !suggestion) return;
+    if (!suggestion) return;
 
-    setNativeInputValue(inputRef.current, suggestion);
+    setInputValue(suggestion);
     setSuggestion("");
-    inputRef.current.focus();
+    inputRef.current?.focus();
   };
 
   useEffect(() => {
@@ -363,25 +356,15 @@ export function OtherDevLoomThread() {
 
       if (shouldApplySuggestion) {
         e.preventDefault();
-        setNativeInputValue(inputElement, suggestion);
-        setSuggestion("");
-      }
-    };
-
-    const handleInput = () => {
-      const value = inputElement.value || "";
-      setInputValue(value);
-      if (value && suggestion) {
+        setInputValue(suggestion);
         setSuggestion("");
       }
     };
 
     inputElement.addEventListener("keydown", handleKeyDown);
-    inputElement.addEventListener("input", handleInput);
 
     return () => {
       inputElement.removeEventListener("keydown", handleKeyDown);
-      inputElement.removeEventListener("input", handleInput);
     };
   }, [suggestion, setSuggestion]);
 
@@ -484,31 +467,8 @@ export function OtherDevLoomThread() {
           )}
 
           {attachedFiles.length > 0 && (
-            <div className="space-y-2 rounded-lg border border-border bg-card/50 p-3">
-              <FilePreview
-                files={attachedFiles}
-                onRemove={handleRemoveFile}
-              />
-              <div className="flex gap-2 pt-2">
-                <Button
-                  size="sm"
-                  variant="default"
-                  onClick={handleFilesSubmit}
-                  disabled={isProcessingFiles}
-                  className="gap-2"
-                >
-                  Send Files
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setAttachedFiles([])}
-                  disabled={isProcessingFiles}
-                  className="gap-2"
-                >
-                  Clear
-                </Button>
-              </div>
+            <div className="rounded-lg border border-border bg-card/50 p-3">
+              <FilePreview files={attachedFiles} onRemove={handleRemoveFile} />
             </div>
           )}
         </div>
@@ -517,6 +477,8 @@ export function OtherDevLoomThread() {
           className="rounded-2xl border-border shadow-sm pointer-events-auto"
           disabled={false}
           maxHeight={96}
+          value={inputValue}
+          onValueChange={setInputValue}
           onSubmit={handleSubmit}
         >
           <PromptInputTextarea
@@ -554,10 +516,10 @@ export function OtherDevLoomThread() {
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!inputValue.trim()}
+                disabled={!inputValue.trim() && composedContent.length === 0}
                 className={cn(
                   "flex h-7 w-7 items-center justify-center rounded-full transition-all duration-300 ease-[cubic-bezier(0.165,0.85,0.45,1)] active:scale-[0.98] sm:h-8 sm:w-8",
-                  inputValue.trim()
+                  inputValue.trim() || composedContent.length > 0
                     ? "bg-foreground text-background hover:opacity-90"
                     : "bg-muted text-muted-foreground hover:opacity-70 disabled:opacity-50",
                 )}
