@@ -15,7 +15,12 @@ describe("trimMessagesToBudget", () => {
       buildMessage("assistant", 200),
     ];
 
-    const trimmed = trimMessagesToBudget(messages, 170);
+    // Budget derived from last two messages:
+    // (400 chars ≈ 100 tokens) + (200 chars ≈ 50 tokens) + overhead (2 * 4) + a small buffer.
+    const SMALL_BUFFER_TOKENS = 12;
+    const budgetForLastTwo =
+      Math.ceil(400 / 4) + Math.ceil(200 / 4) + 2 * 4 + SMALL_BUFFER_TOKENS;
+    const trimmed = trimMessagesToBudget(messages, budgetForLastTwo);
 
     expect(trimmed).toEqual(messages.slice(2));
   });

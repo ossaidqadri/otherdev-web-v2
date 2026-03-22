@@ -54,6 +54,7 @@ const RAG_SIMILARITY_THRESHOLD = Number.parseFloat(
   process.env.RAG_SIMILARITY_THRESHOLD || "0.1",
 );
 const RAG_MATCH_COUNT = Number.parseInt(process.env.RAG_MATCH_COUNT || "10", 10);
+// Default context window for RAG snippets (~600 tokens), keeping headroom for prompts.
 const RAG_CONTEXT_CHAR_LIMIT = Number.parseInt(
   process.env.RAG_CONTEXT_CHAR_LIMIT || "2400",
   10,
@@ -64,19 +65,36 @@ const MODEL_CONTEXT_TOKEN_LIMIT = Number.parseInt(
   10,
 );
 
+// Cap completion tokens to 25% of the context window (even when env max is higher);
+// this mirrors common guidance to keep generations shorter than prompts to avoid
+// context overflows.
+const MAX_COMPLETION_TOKEN_RATIO = 0.25;
 const COMPLETION_TOKEN_TARGET = Math.max(
   256,
   Math.min(
     Number.parseInt(process.env.GROQ_MAX_COMPLETION_TOKENS || "1024", 10),
-    Math.floor(MODEL_CONTEXT_TOKEN_LIMIT * 0.25),
+    Math.floor(MODEL_CONTEXT_TOKEN_LIMIT * MAX_COMPLETION_TOKEN_RATIO),
   ),
 );
 
+// Ensures a reasonable message budget even if the model context is extremely small
+// (about two short Q/A turns worth of tokens).
+const FALLBACK_MESSAGE_BUDGET = 500;
+// The minimum history budget kept after subtracting system/context tokens.
+const MIN_DYNAMIC_MESSAGE_BUDGET = 200;
+// Small cushion for image metadata when present in message content (base64 header, url).
+const IMAGE_TOKEN_BUFFER = 20;
+// Accounts for role/formatting overhead in chat payloads (role names, separators).
+const MESSAGE_OVERHEAD_TOKENS = 4;
+// Heuristic ratio for typical English text; real tokenization varies by language/content.
 const TOKEN_TO_CHAR_RATIO = 4;
+const TRUNCATION_NOTICE = "[Context truncated for brevity]";
 const MESSAGE_TOKEN_BUDGET = Math.max(
-  500,
+  FALLBACK_MESSAGE_BUDGET,
   MODEL_CONTEXT_TOKEN_LIMIT - COMPLETION_TOKEN_TARGET,
 );
+
+let cachedGroqClient: Groq | null = null;
 
 function getGroqClient(): Groq {
   const apiKey = process.env.GROQ_API_KEY;
@@ -85,7 +103,13 @@ function getGroqClient(): Groq {
     throw new Error("GROQ_API_KEY is not configured");
   }
 
-  return new Groq({ apiKey });
+  // Groq SDK client is a thin HTTP wrapper without per-request mutable state; caching avoids
+  // repeated initialization while remaining safe across warmed serverless invocations.
+  if (!cachedGroqClient) {
+    cachedGroqClient = new Groq({ apiKey });
+  }
+
+  return cachedGroqClient;
 }
 
 const DANGEROUS_PATTERNS = [
@@ -231,14 +255,19 @@ function buildContext(
   return "Provide helpful general information about Other Dev based on common topics: projects (fashion, e-commerce, real estate, legal tech, SaaS), web development services, design capabilities, and technologies used.";
 }
 
+/**
+ * Roughly estimate token usage using a simple character-to-token heuristic.
+ * Text tokens are approximated at a 4:1 char/token ratio, while image blocks
+ * reserve a small fixed buffer (IMAGE_TOKEN_BUFFER) to account for metadata.
+ */
 function approximateTokens(content: string | ContentBlock[]): number {
   if (Array.isArray(content)) {
     return content.reduce((total, block) => {
       if (block.type === "text") {
         return total + Math.ceil(block.text.length / TOKEN_TO_CHAR_RATIO);
       }
-      // Images have no direct token contribution but still reserve a small budget
-      return total + 20;
+      // Images have minimal token contribution; reserve a small fixed buffer for metadata
+      return total + IMAGE_TOKEN_BUFFER;
     }, 0);
   }
 
@@ -254,10 +283,12 @@ export function trimMessagesToBudget(
   const trimmed: GroqMessage[] = [];
   let remaining = Math.max(tokenBudget, 0);
 
-  for (let idx = messages.length - 1; idx >= 0; idx -= 1) {
-    const message = messages[idx];
-    const estimatedTokens = approximateTokens(message.content) + 4; // small buffer per message
+  for (let messageIndex = messages.length - 1; messageIndex >= 0; messageIndex -= 1) {
+    const message = messages[messageIndex];
+    const estimatedTokens =
+      approximateTokens(message.content) + MESSAGE_OVERHEAD_TOKENS;
 
+    // Always retain the most recent message even if it exceeds the nominal budget
     if (trimmed.length === 0 || remaining - estimatedTokens >= 0) {
       trimmed.push(message);
       remaining -= estimatedTokens;
@@ -271,7 +302,7 @@ export function trimMessagesToBudget(
 
 export function clampContextLength(context: string, maxChars: number): string {
   if (context.length <= maxChars) return context;
-  return `${context.slice(0, maxChars)}\n\n[Context truncated for brevity]`;
+  return `${context.slice(0, maxChars)}\n\n${TRUNCATION_NOTICE}`;
 }
 
 function createJsonResponse(
@@ -367,7 +398,7 @@ export async function POST(request: Request): Promise<Response> {
     }));
 
     const availableMessageBudget = Math.max(
-      200,
+      MIN_DYNAMIC_MESSAGE_BUDGET,
       MESSAGE_TOKEN_BUDGET - approximateTokens(systemPrompt),
     );
 
