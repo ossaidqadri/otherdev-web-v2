@@ -280,14 +280,20 @@ export async function POST(request: Request): Promise<Response> {
 
     const systemPrompt = SYSTEM_PROMPT_TEMPLATE.replace("{context}", context);
 
-    const boundedHasImages = boundedMessages.some((message) =>
-      Array.isArray(message.content) &&
-      message.content.some((block) => block.type === "image_url")
+    const boundedHasImages = boundedMessages.some(
+      (message) =>
+        Array.isArray(message.content) &&
+        message.content.some((block) => block.type === "image_url"),
+    );
+    const effectiveHasImageContent =
+      hasImageContent === true || boundedHasImages === true;
+
+    validateImageContent(
+      boundedMessages,
+      hasImageContent !== undefined ? hasImageContent : boundedHasImages,
     );
 
-    validateImageContent(boundedMessages, hasImageContent ?? boundedHasImages);
-
-    const selectedModel = selectModel(hasImageContent ?? boundedHasImages);
+    const selectedModel = selectModel(effectiveHasImageContent);
 
     const formattedMessages = formatMessagesForGroq(boundedMessages).map((m) => ({
       role: m.role as "user" | "assistant",

@@ -12,6 +12,8 @@ export interface GroqMessage {
   content: string | ContentBlock[];
 }
 
+const IMAGE_BLOCK_CHAR_ESTIMATE = 500;
+
 const DEFAULT_MAX_MESSAGES = Math.max(
   Number.parseInt(process.env.CHAT_HISTORY_MESSAGE_LIMIT || "12", 10),
   4,
@@ -62,7 +64,7 @@ export function validateImageContent(
   }
 }
 
-function estimateMessageLength(message: Message): number {
+function estimateMessageCharacterCount(message: Message): number {
   if (typeof message.content === "string") {
     return message.content.length;
   }
@@ -72,7 +74,7 @@ function estimateMessageLength(message: Message): number {
       return total + block.text.length;
     }
     // Image URLs can be long; account for them generously
-    return total + 500;
+    return total + IMAGE_BLOCK_CHAR_ESTIMATE;
   }, 0);
 }
 
@@ -100,14 +102,14 @@ export function boundMessagesForGroq(
   const trimmedMessages = [...recentMessages];
 
   let totalLength = trimmedMessages.reduce(
-    (total, message) => total + estimateMessageLength(message),
+    (total, message) => total + estimateMessageCharacterCount(message),
     0,
   );
 
   while (trimmedMessages.length > minMessages && totalLength > charBudget) {
     const removed = trimmedMessages.shift();
     if (removed) {
-      totalLength -= estimateMessageLength(removed);
+      totalLength -= estimateMessageCharacterCount(removed);
     }
   }
 
