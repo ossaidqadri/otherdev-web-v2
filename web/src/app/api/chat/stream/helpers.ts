@@ -16,6 +16,8 @@ export interface GroqMessage {
 // Use a generous estimate to avoid under-counting when bounding history size.
 const IMAGE_BLOCK_CHAR_ESTIMATE = 500;
 const MIN_MESSAGE_FLOOR = 4;
+const DEFAULT_MESSAGE_LIMIT = 12;
+const DEFAULT_CHAR_BUDGET = 12000;
 
 export function selectModel(hasImageContent: boolean | undefined): string {
   if (hasImageContent === true) {
@@ -35,12 +37,7 @@ export function validateImageContent(
   messages: Message[],
   hasImageContent: boolean | undefined,
 ): void {
-  const hasImages = messages.some((message) => {
-    if (Array.isArray(message.content)) {
-      return message.content.some((block) => block.type === "image_url");
-    }
-    return false;
-  });
+  const hasImages = messagesContainImages(messages);
 
   if (hasImageContent === true && !hasImages) {
     console.warn(
@@ -55,6 +52,15 @@ export function validateImageContent(
         "Consider setting hasImageContent to true for better model selection.",
     );
   }
+}
+
+export function messagesContainImages(messages: Message[]): boolean {
+  return messages.some((message) => {
+    if (Array.isArray(message.content)) {
+      return message.content.some((block) => block.type === "image_url");
+    }
+    return false;
+  });
 }
 
 function estimateMessageCharacterCount(message: Message): number {
@@ -83,13 +89,20 @@ export function boundMessagesForGroq(
 
   const maxMessages = Math.max(
     options?.maxMessages ??
-      Number.parseInt(process.env.CHAT_HISTORY_MESSAGE_LIMIT || "12", 10),
+      Number.parseInt(
+        process.env.CHAT_HISTORY_MESSAGE_LIMIT ||
+          DEFAULT_MESSAGE_LIMIT.toString(),
+        10,
+      ),
     MIN_MESSAGE_FLOOR,
   );
   const charBudget =
     options?.charBudget ??
     Math.max(
-      Number.parseInt(process.env.CHAT_HISTORY_CHAR_BUDGET || "12000", 10),
+      Number.parseInt(
+        process.env.CHAT_HISTORY_CHAR_BUDGET || DEFAULT_CHAR_BUDGET.toString(),
+        10,
+      ),
       1000,
     );
   const minMessages = Math.max(
