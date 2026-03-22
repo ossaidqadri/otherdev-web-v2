@@ -282,8 +282,7 @@ export async function POST(request: Request): Promise<Response> {
     const systemPrompt = SYSTEM_PROMPT_TEMPLATE.replace("{context}", context);
 
     const boundedHasImages = messagesContainImages(boundedMessages);
-    const effectiveHasImageContent =
-      hasImageContent === true || boundedHasImages === true;
+    const effectiveHasImageContent = hasImageContent || boundedHasImages;
 
     validateImageContent(
       boundedMessages,

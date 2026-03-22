@@ -12,10 +12,10 @@ export interface GroqMessage {
   content: string | ContentBlock[];
 }
 
-// Typical base64 image URLs for previews can easily exceed a few hundred characters.
-// Use a generous estimate to avoid under-counting when bounding history size.
-const IMAGE_BLOCK_CHAR_ESTIMATE = 500;
-const MIN_MESSAGE_FLOOR = 4;
+// Base64 image URLs are often several thousand characters; use a generous estimate
+// to avoid under-counting when bounding history size.
+const IMAGE_BLOCK_CHAR_ESTIMATE = 5000;
+const MIN_MESSAGES = 4;
 const DEFAULT_MESSAGE_LIMIT = 12;
 const DEFAULT_CHAR_BUDGET = 12000;
 
@@ -100,7 +100,7 @@ export function boundMessagesForGroq(
     options?.maxMessages ??
     Math.max(
       getValidatedInt(process.env.CHAT_HISTORY_MESSAGE_LIMIT, DEFAULT_MESSAGE_LIMIT),
-      MIN_MESSAGE_FLOOR,
+      MIN_MESSAGES,
     );
   const charBudget =
     options?.charBudget ??
@@ -109,7 +109,7 @@ export function boundMessagesForGroq(
       1000,
     );
   const minMessages = Math.max(
-    options?.minMessages ?? MIN_MESSAGE_FLOOR,
+    options?.minMessages ?? MIN_MESSAGES,
     1,
   );
 

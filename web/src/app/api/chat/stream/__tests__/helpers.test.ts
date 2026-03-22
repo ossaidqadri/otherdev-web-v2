@@ -60,7 +60,7 @@ describe("boundMessagesForGroq", () => {
     ];
 
     const result = boundMessagesForGroq(messages, {
-      charBudget: 600,
+      charBudget: 6000,
       maxMessages: 5,
       minMessages: 2,
     });
