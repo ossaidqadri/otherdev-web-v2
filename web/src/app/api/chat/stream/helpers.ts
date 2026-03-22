@@ -19,7 +19,7 @@ const MIN_MESSAGES = 4;
 const DEFAULT_MESSAGE_LIMIT = 12;
 const DEFAULT_CHAR_BUDGET = 12000;
 
-function getValidatedInt(value: string | undefined, fallback: number): number {
+function getPositiveInt(value: string | undefined, fallback: number): number {
   const safeFallback = Number.isFinite(fallback) && fallback > 0 ? fallback : 1;
   const parsed = Number.parseInt(value ?? "", 10);
   if (Number.isFinite(parsed) && parsed > 0) {
@@ -99,13 +99,13 @@ export function boundMessagesForGroq(
   const maxMessages =
     options?.maxMessages ??
     Math.max(
-      getValidatedInt(process.env.CHAT_HISTORY_MESSAGE_LIMIT, DEFAULT_MESSAGE_LIMIT),
+      getPositiveInt(process.env.CHAT_HISTORY_MESSAGE_LIMIT, DEFAULT_MESSAGE_LIMIT),
       MIN_MESSAGES,
     );
   const charBudget =
     options?.charBudget ??
     Math.max(
-      getValidatedInt(process.env.CHAT_HISTORY_CHAR_BUDGET, DEFAULT_CHAR_BUDGET),
+      getPositiveInt(process.env.CHAT_HISTORY_CHAR_BUDGET, DEFAULT_CHAR_BUDGET),
       1000,
     );
   const minMessages = Math.max(
