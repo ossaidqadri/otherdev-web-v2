@@ -19,6 +19,14 @@ const MIN_MESSAGE_FLOOR = 4;
 const DEFAULT_MESSAGE_LIMIT = 12;
 const DEFAULT_CHAR_BUDGET = 12000;
 
+function getValidatedInt(value: string | undefined, fallback: number): number {
+  const parsed = Number.parseInt(value ?? "", 10);
+  if (Number.isFinite(parsed)) {
+    return parsed;
+  }
+  return fallback;
+}
+
 export function selectModel(hasImageContent: boolean | undefined): string {
   if (hasImageContent === true) {
     return "meta-llama/llama-4-scout-17b-16e-instruct";
@@ -89,19 +97,17 @@ export function boundMessagesForGroq(
 
   const maxMessages = Math.max(
     options?.maxMessages ??
-      Number.parseInt(
+      getValidatedInt(
         process.env.CHAT_HISTORY_MESSAGE_LIMIT ||
           DEFAULT_MESSAGE_LIMIT.toString(),
-        10,
       ),
     MIN_MESSAGE_FLOOR,
   );
   const charBudget =
     options?.charBudget ??
     Math.max(
-      Number.parseInt(
+      getValidatedInt(
         process.env.CHAT_HISTORY_CHAR_BUDGET || DEFAULT_CHAR_BUDGET.toString(),
-        10,
       ),
       1000,
     );
