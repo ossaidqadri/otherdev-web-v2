@@ -95,20 +95,18 @@ export function boundMessagesForGroq(
 ): Message[] {
   if (messages.length === 0) return [];
 
+  const envMessageLimit = Math.max(
+    getValidatedInt(process.env.CHAT_HISTORY_MESSAGE_LIMIT, DEFAULT_MESSAGE_LIMIT),
+    MIN_MESSAGE_FLOOR,
+  );
   const maxMessages = Math.max(
-    options?.maxMessages ??
-      getValidatedInt(
-        process.env.CHAT_HISTORY_MESSAGE_LIMIT ||
-          DEFAULT_MESSAGE_LIMIT.toString(),
-      ),
+    options?.maxMessages ?? envMessageLimit,
     MIN_MESSAGE_FLOOR,
   );
   const charBudget =
     options?.charBudget ??
     Math.max(
-      getValidatedInt(
-        process.env.CHAT_HISTORY_CHAR_BUDGET || DEFAULT_CHAR_BUDGET.toString(),
-      ),
+      getValidatedInt(process.env.CHAT_HISTORY_CHAR_BUDGET, DEFAULT_CHAR_BUDGET),
       1000,
     );
   const minMessages = Math.max(
