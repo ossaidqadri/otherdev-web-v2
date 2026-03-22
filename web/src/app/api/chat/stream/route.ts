@@ -9,7 +9,14 @@ import {
 } from "@/server/lib/rate-limit";
 import { createArtifactTool } from "@/server/lib/artifact-tool";
 import { stripMarkdown } from "@/lib/utils";
-import { selectModel, formatMessagesForGroq, validateImageContent, type Message } from "./helpers";
+import {
+  selectModel,
+  formatMessagesForGroq,
+  validateImageContent,
+  type ContentBlock,
+  type GroqMessage,
+  type Message,
+} from "./helpers";
 
 // Zod schemas for validating content blocks (matching shared ContentBlock types)
 const TextBlockSchema = z.object({
@@ -39,10 +46,6 @@ const RequestSchema = z.object({
   hasImageContent: z.boolean().optional(),
 });
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
-
 const RAG_MAX_MESSAGE_LENGTH = Number.parseInt(
   process.env.RAG_MAX_MESSAGE_LENGTH || "500",
   10
@@ -51,6 +54,39 @@ const RAG_SIMILARITY_THRESHOLD = Number.parseFloat(
   process.env.RAG_SIMILARITY_THRESHOLD || "0.1",
 );
 const RAG_MATCH_COUNT = Number.parseInt(process.env.RAG_MATCH_COUNT || "10", 10);
+const RAG_CONTEXT_CHAR_LIMIT = Number.parseInt(
+  process.env.RAG_CONTEXT_CHAR_LIMIT || "2400",
+  10,
+);
+
+const MODEL_CONTEXT_TOKEN_LIMIT = Number.parseInt(
+  process.env.GROQ_CONTEXT_TOKEN_LIMIT || "8000",
+  10,
+);
+
+const COMPLETION_TOKEN_TARGET = Math.max(
+  256,
+  Math.min(
+    Number.parseInt(process.env.GROQ_MAX_COMPLETION_TOKENS || "1024", 10),
+    Math.floor(MODEL_CONTEXT_TOKEN_LIMIT * 0.25),
+  ),
+);
+
+const TOKEN_TO_CHAR_RATIO = 4;
+const MESSAGE_TOKEN_BUDGET = Math.max(
+  500,
+  MODEL_CONTEXT_TOKEN_LIMIT - COMPLETION_TOKEN_TARGET,
+);
+
+function getGroqClient(): Groq {
+  const apiKey = process.env.GROQ_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("GROQ_API_KEY is not configured");
+  }
+
+  return new Groq({ apiKey });
+}
 
 const DANGEROUS_PATTERNS = [
   /\[INST\]/gi,
@@ -195,6 +231,49 @@ function buildContext(
   return "Provide helpful general information about Other Dev based on common topics: projects (fashion, e-commerce, real estate, legal tech, SaaS), web development services, design capabilities, and technologies used.";
 }
 
+function approximateTokens(content: string | ContentBlock[]): number {
+  if (Array.isArray(content)) {
+    return content.reduce((total, block) => {
+      if (block.type === "text") {
+        return total + Math.ceil(block.text.length / TOKEN_TO_CHAR_RATIO);
+      }
+      // Images have no direct token contribution but still reserve a small budget
+      return total + 20;
+    }, 0);
+  }
+
+  return Math.ceil(content.length / TOKEN_TO_CHAR_RATIO);
+}
+
+export function trimMessagesToBudget(
+  messages: GroqMessage[],
+  tokenBudget: number,
+): GroqMessage[] {
+  if (messages.length === 0) return messages;
+
+  const trimmed: GroqMessage[] = [];
+  let remaining = Math.max(tokenBudget, 0);
+
+  for (let idx = messages.length - 1; idx >= 0; idx -= 1) {
+    const message = messages[idx];
+    const estimatedTokens = approximateTokens(message.content) + 4; // small buffer per message
+
+    if (trimmed.length === 0 || remaining - estimatedTokens >= 0) {
+      trimmed.push(message);
+      remaining -= estimatedTokens;
+    } else {
+      break;
+    }
+  }
+
+  return trimmed.reverse();
+}
+
+export function clampContextLength(context: string, maxChars: number): string {
+  if (context.length <= maxChars) return context;
+  return `${context.slice(0, maxChars)}\n\n[Context truncated for brevity]`;
+}
+
 function createJsonResponse(
   data: object,
   status: number,
@@ -271,7 +350,10 @@ export async function POST(request: Request): Promise<Response> {
       RAG_MATCH_COUNT,
     );
 
-    const context = buildContext(similarDocs, queryQuality);
+    const context = clampContextLength(
+      buildContext(similarDocs, queryQuality),
+      RAG_CONTEXT_CHAR_LIMIT,
+    );
 
     const systemPrompt = SYSTEM_PROMPT_TEMPLATE.replace("{context}", context);
 
@@ -284,16 +366,27 @@ export async function POST(request: Request): Promise<Response> {
         : m.content,
     }));
 
+    const availableMessageBudget = Math.max(
+      200,
+      MESSAGE_TOKEN_BUDGET - approximateTokens(systemPrompt),
+    );
+
+    const trimmedMessages = trimMessagesToBudget(
+      formattedMessages,
+      availableMessageBudget,
+    );
+
     const chatMessages = [
       { role: "system" as const, content: systemPrompt },
-      ...formattedMessages,
+      ...trimmedMessages,
     ];
 
+    const groq = getGroqClient();
     const completion = await groq.chat.completions.create({
       model: selectedModel,
       messages: chatMessages,
       temperature: 0.7,
-      max_tokens: 8000,
+      max_tokens: COMPLETION_TOKEN_TARGET,
       stream: true,
       tools: [createArtifactTool],
       tool_choice: "auto",
