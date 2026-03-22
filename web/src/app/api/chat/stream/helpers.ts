@@ -20,11 +20,12 @@ const DEFAULT_MESSAGE_LIMIT = 12;
 const DEFAULT_CHAR_BUDGET = 12000;
 
 function getValidatedInt(value: string | undefined, fallback: number): number {
+  const safeFallback = Number.isFinite(fallback) && fallback > 0 ? fallback : 1;
   const parsed = Number.parseInt(value ?? "", 10);
   if (Number.isFinite(parsed) && parsed > 0) {
     return parsed;
   }
-  return fallback;
+  return safeFallback;
 }
 
 export function selectModel(hasImageContent: boolean | undefined): string {
@@ -95,14 +96,12 @@ export function boundMessagesForGroq(
 ): Message[] {
   if (messages.length === 0) return [];
 
-  const maxMessages = Math.max(
+  const maxMessages =
     options?.maxMessages ??
-      Math.max(
-        getValidatedInt(process.env.CHAT_HISTORY_MESSAGE_LIMIT, DEFAULT_MESSAGE_LIMIT),
-        MIN_MESSAGE_FLOOR,
-      ),
-    MIN_MESSAGE_FLOOR,
-  );
+    Math.max(
+      getValidatedInt(process.env.CHAT_HISTORY_MESSAGE_LIMIT, DEFAULT_MESSAGE_LIMIT),
+      MIN_MESSAGE_FLOOR,
+    );
   const charBudget =
     options?.charBudget ??
     Math.max(
