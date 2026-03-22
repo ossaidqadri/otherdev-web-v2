@@ -19,7 +19,7 @@ const MIN_MESSAGES = 4;
 const DEFAULT_MESSAGE_LIMIT = 12;
 const DEFAULT_CHAR_BUDGET = 12000;
 
-function getPositiveInt(value: string | undefined, fallback: number): number {
+export function getPositiveInt(value: string | undefined, fallback: number): number {
   const safeFallback = Number.isFinite(fallback) && fallback > 0 ? fallback : 1;
   const parsed = Number.parseInt(value ?? "", 10);
   if (Number.isFinite(parsed) && parsed > 0) {
@@ -72,7 +72,7 @@ export function messagesContainImages(messages: Message[]): boolean {
   });
 }
 
-function estimateMessageCharacterCount(message: Message): number {
+export function estimateMessageCharacterCount(message: Message): number {
   if (typeof message.content === "string") {
     return message.content.length;
   }
